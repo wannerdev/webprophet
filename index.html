@@ -1,0 +1,3519 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROPHET WARS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #0a1628;
+        }
+
+        #hud {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .hud-item {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .hud-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #miracles {
+            position: fixed;
+            left: 10px;
+            bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .miracle-btn {
+            background: linear-gradient(135deg, #2d1b4e, #1a0f2e);
+            border: 2px solid #6b4ba3;
+            border-radius: 12px;
+            padding: 12px 20px;
+            color: #c9a0ff;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .miracle-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #3d2b6e, #2a1f4e);
+            transform: scale(1.02);
+        }
+
+        .miracle-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .miracle-cost {
+            font-size: 11px;
+            color: #8866bb;
+            margin-top: 4px;
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 12px;
+            color: #888;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        #territory-ui {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #4a4;
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            z-index: 200;
+            display: none;
+        }
+
+        #territory-ui button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #message {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: #4f4;
+            z-index: 100;
+            display: none;
+            font-size: 14px;
+        }
+
+        #ethics-container {
+            width: 100px;
+            height: 12px;
+            background: linear-gradient(90deg, #333 0%, #000 45%, #fff 55%, #eee 100%);
+            border: 2px solid #555;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        #ethics-marker {
+            width: 4px;
+            height: 16px;
+            background: #f0f;
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 1px solid #fff;
+            box-shadow: 0 0 4px #f0f;
+        }
+
+        .action-container {
+            position: fixed;
+            right: 10px;
+            bottom: 120px;
+            /* Above instructions */
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .action-btn {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #666;
+            color: #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: right;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: #333;
+            border-color: #999;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .cost-gold {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .cost-inf {
+            color: #4f4;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="hud">
+        <div class="hud-item">
+            <div class="hud-icon">❤️</div>
+            <span id="health">15</span>
+        </div>
+        <div class="hud-item">
+            <div class="hud-icon">✋</div>
+            <span id="influence">0</span>
+        </div>
+        <div class="hud-item">
+            <div class="hud-icon">💰</div>
+            <span id="gold">50</span>
+        </div>
+        <div class="hud-item">
+            <div class="hud-icon">�👥</div>
+            <span id="followers">0</span>
+        </div>
+        <div class="hud-item">
+            <div class="hud-icon">⚖️</div>
+            <div id="ethics-container">
+                <div id="ethics-marker"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="miracles">
+        <button class="miracle-btn" id="miracleConvert" onclick="game.useMiracle('convert', event)">
+            ✨ Mass Convert
+            <div class="miracle-cost">Cost: 700 ✋</div>
+        </button>
+        <button class="miracle-btn" id="miracleWater" onclick="game.useMiracle('water', event)">
+            🌊 Water Walk
+            <div class="miracle-cost">Cost: 1000 ✋</div>
+        </button>
+        <button class="miracle-btn" id="miracleTerritory" onclick="game.useMiracle('territory', event)">
+            🏰 Claim Territory
+            <div class="miracle-cost">Requires: 10 Followers</div>
+        </button>
+    </div>
+
+    <div id="instructions">
+        <strong>Controls:</strong><br>
+        WASD / Arrows - Move<br>
+        Click - Select/Interact<br>
+        Scroll - Zoom
+    </div>
+
+    <div class="action-container">
+        <div style="display: flex; gap: 4px;">
+            <button class="action-btn" id="btnFighter" onclick="game.actionConvertFighter()" style="flex: 1;">
+                ⚔️ Convert to Fighter<br>
+                <span class="cost-inf">100 ✋</span>
+            </button>
+            <button class="action-btn" onclick="game.actionConvertFighter(10)"
+                style="padding: 4px 8px; font-size: 10px;">
+                +10
+            </button>
+        </div>
+        <div style="display: flex; gap: 4px;">
+            <button class="action-btn" id="btnReskill" onclick="game.actionReskill()" style="flex: 1;">
+                🔨 Reskill to Worker<br>
+                <span class="cost-inf">50 ✋</span>
+            </button>
+            <button class="action-btn" onclick="game.actionReskill(10)" style="padding: 4px 8px; font-size: 10px;">
+                +10
+            </button>
+        </div>
+        <button class="action-btn" id="btnBribe" onclick="game.actionBribe()">
+            💰 Bribe Greedy<br>
+            <span class="cost-gold">50 G</span> / <span
+                style="color: #fff; font-weight: bold; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">-10
+                Ethics</span>
+        </button>
+        <button class="action-btn" id="btnSupport" onclick="game.actionSupport()">
+            🤝 Support Greedy<br>
+            <span class="cost-gold">30 G</span> / <span style="color: #fff; font-weight: bold;">+5 Ethics</span>
+        </button>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+        // ============================================
+        // PROPHET WARS - Complete Game Implementation
+        // ============================================
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game Constants
+        const WORLD_SIZE = 3000;
+        const CONVERSION_THRESHOLD = 30;
+        const PROPHET_SPEED = 3;
+        const FOLLOWER_SPEED = 1.8;
+        const CONVERSION_RADIUS = 80;
+        const HARDLINER_GROUP_SIZE = 3;
+        const MAX_FOLLOWERS = 300; // Maximum persons on map
+
+        // Colors
+        const COLORS = {
+            player: '#22cc44',
+            playerLight: '#44ff66',
+            rival1: '#cc4444',
+            rival2: '#4444cc',
+            rival3: '#cc44cc',
+            openMinded: '#ffffff',
+            neutral: '#888888',
+            water: '#1a4a6e',
+            waterDeep: '#0d2e47',
+            land: '#3d5c3a',
+            beach: '#c2b280',
+            mountain: '#6b6b6b',
+            mountainPeak: '#ffffff',
+            tree: '#2d4a2a',
+            gold: '#ffd700',
+            smoke: '#dddddd',
+            nairb: '#c9a86c' // Tan/sandal color for Nairb
+        };
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.life = 1.0;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.size = Math.random() * 5 + 3;
+            }
+            update(dt) {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= dt * 1.5;
+                this.size += dt * 2;
+            }
+            draw(ctx, camera) {
+                const sx = (this.x - camera.x) * camera.zoom + canvas.width / 2;
+                const sy = (this.y - camera.y) * camera.zoom + canvas.height / 2;
+                ctx.fillStyle = `rgba(220, 220, 220, ${this.life * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy, this.size * camera.zoom, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class SpeechBubble {
+            constructor(x, y, text) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.life = 1.2; // 1.2 second duration (shorter)
+                this.vy = -40; // Float upward faster
+            }
+            update(dt) {
+                this.y += this.vy * dt;
+                this.life -= dt;
+            }
+            draw(ctx, camera) {
+                if (this.life <= 0) return;
+                const sx = (this.x - camera.x) * camera.zoom + canvas.width / 2;
+                const sy = (this.y - camera.y) * camera.zoom + canvas.height / 2;
+                const alpha = Math.min(1, this.life);
+                const scale = camera.zoom;
+
+                // Smaller bubble background
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+                ctx.strokeStyle = `rgba(150, 150, 150, ${alpha * 0.4})`;
+                ctx.lineWidth = 1 * scale;
+                ctx.beginPath();
+                const bw = 35 * scale; // Smaller width
+                const bh = 16 * scale; // Smaller height
+                ctx.roundRect(sx - bw / 2, sy - bh, bw, bh, 5 * scale);
+                ctx.fill();
+                ctx.stroke();
+
+                // Smaller bubble tail
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+                ctx.beginPath();
+                ctx.moveTo(sx - 3 * scale, sy);
+                ctx.lineTo(sx + 3 * scale, sy);
+                ctx.lineTo(sx, sy + 6 * scale);
+                ctx.closePath();
+                ctx.fill();
+
+                // Smaller text
+                ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+                ctx.font = `${9 * scale}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.text, sx, sy - bh / 2);
+            }
+        }
+
+        // Utility Functions
+        const dist = (a, b) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+        const randRange = (min, max) => min + Math.random() * (max - min);
+        const randInt = (min, max) => Math.floor(randRange(min, max));
+        const distBetween = (a, b) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+
+        // Generate short gibberish text for speech bubbles
+        const gibberish = () => {
+            const chars = 'aeiobdfgklmnprst?!..';
+            const len = 3 + Math.floor(Math.random() * 4); // 3-6 chars
+            let result = '';
+            for (let i = 0; i < len; i++) {
+                result += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return result;
+        };
+
+        // Ray-casting algorithm for point in polygon
+        const isPointInPoly = (p, poly) => {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                const intersect = ((yi > p.y) !== (yj > p.y)) &&
+                    (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        };
+
+        // ============================================
+        // Entity Classes
+        // ============================================
+
+        class Prophet {
+            constructor(x, y, faith, isPlayer = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.faith = faith;
+                this.isPlayer = isPlayer;
+                this.radius = 22; // Increased size
+                this.baseRadius = 22; // Original size for reference
+                this.hp = 15;
+                this.maxHp = 15;
+                this.influence = isPlayer ? 100 : 200;
+                this.gold = isPlayer ? 50 : 0;
+                this.ethics = 0; // -100 (Black) to 100 (White)
+                this.waterWalkTimer = 0;
+                this.sermonCooldown = 0;
+                this.territory = null;
+                this.techLevel = 1;
+                this.aiTarget = null;
+                this.aiTimer = 0;
+                this.glowPhase = 0;
+                this.smokeTimer = 0;
+                this.isConverted = false; // Has this prophet been converted?
+                this.onLedge = false; // Is prophet on Holy Mountain ledge?
+                this.isPreaching = false; // Is prophet currently preaching?
+                this.preachingTimer = 0; // Duration counter for sermon (20 seconds)
+                this.isNairb = false; // Is this Nairb the dummy prophet?
+                this.smackTimer = 0; // Timer for Nairb smacking followers
+                this.name = ''; // Prophet name (empty for regular prophets)
+            }
+
+            getColor() {
+                // Robust check for player allegiance (original or converted)
+                if (this.isPlayer || this.faith === 'player' || this.isConverted) return COLORS.player;
+                if (this.isNairb || this.faith === 'nairb') return COLORS.nairb;
+                if (this.faith === 'rival1') return COLORS.rival1;
+                if (this.faith === 'rival2') return COLORS.rival2;
+                return COLORS.rival3;
+            }
+
+            update(dt, game) {
+                this.glowPhase += dt * 3;
+
+                if (!this.isPlayer) {
+                    if (this.isNairb) {
+                        this.updateNairbAI(dt, game);
+                    } else {
+                        this.updateAI(dt, game);
+                    }
+                } else {
+                    // Player Controls
+                    if (game.keys['w'] || game.keys['arrowup']) this.vy -= 1.5;
+                    if (game.keys['s'] || game.keys['arrowdown']) this.vy += 1.5;
+                    if (game.keys['a'] || game.keys['arrowleft']) this.vx -= 1.5;
+                    if (game.keys['d'] || game.keys['arrowright']) this.vx += 1.5;
+                }
+
+                // Apply velocity with friction
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.9;
+                this.vy *= 0.9;
+
+                // Smoke particles at feet
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > 0.5) {
+                    this.smokeTimer -= dt;
+                    if (this.smokeTimer <= 0) {
+                        this.smokeTimer = 0.1;
+                        game.particles.push(new Particle(this.x, this.y + 10));
+                    }
+                }
+
+                // Clamp speed
+                if (speed > PROPHET_SPEED * 1.5) {
+                    this.vx = (this.vx / speed) * PROPHET_SPEED * 1.5;
+                    this.vy = (this.vy / speed) * PROPHET_SPEED * 1.5;
+                }
+
+                // Water collision
+                if (this.waterWalkTimer <= 0) {
+                    const terrain = game.getTerrainAt(this.x, this.y);
+                    if (terrain === 'water') {
+                        // Check if lake or ocean
+                        const inLake = game.lakePolygon && isPointInPoly(this, game.lakePolygon);
+
+                        if (inLake) {
+                            // Push OUT of lake (using center for direction relative to player)
+                            const angle = Math.atan2(this.y - game.lakeY, this.x - game.lakeX);
+                            this.x += Math.cos(angle) * 8;
+                            this.y += Math.sin(angle) * 8;
+                        } else {
+                            // Push IN from ocean (towards center)
+                            const angle = Math.atan2(this.y - WORLD_SIZE / 2, this.x - WORLD_SIZE / 2);
+                            this.x -= Math.cos(angle) * 8;
+                            this.y -= Math.sin(angle) * 8;
+                        }
+                    }
+                } else {
+                    this.waterWalkTimer -= dt;
+                }
+
+                // Mountain collision
+                const player = game.getPlayer();
+                const isGuarded = player && player.sermonCooldown > 0;
+                this.onLedge = false; // Reset each frame
+
+                for (const m of game.mountains) {
+                    const d = dist(this, m);
+                    let collideDist = m.radius + this.radius;
+
+                    // Player can climb Holy Mountain when not guarded
+                    if (m.isHoly && this.isPlayer) {
+                        // Check if prophet is on the ledge (close to mountain center)
+                        const ledgeRadius = m.radius * 0.5;
+                        if (d < ledgeRadius) {
+                            this.onLedge = true;
+                        }
+                        // Allow player to move freely on Holy Mountain (no collision)
+                        continue;
+                    }
+
+                    // If Holy Mountain and Guarded, increase collision radius for AI
+                    if (m.isHoly && isGuarded) {
+                        collideDist += 30; // Guard pushes further
+                    }
+
+                    if (d < collideDist) {
+                        const angle = Math.atan2(this.y - m.y, this.x - m.x);
+                        this.x = m.x + Math.cos(angle) * collideDist;
+                        this.y = m.y + Math.sin(angle) * collideDist; // Hard push
+
+                        // Stop velocity
+                        const dot = this.vx * Math.cos(angle) + this.vy * Math.sin(angle);
+                        if (dot < 0) {
+                            // Bounce slightly?
+                            this.vx = 0;
+                            this.vy = 0;
+                        }
+                    }
+                }
+
+                // World bounds
+                if (this.x <= 50 || this.x >= WORLD_SIZE - 50) this.vx *= -0.5;
+                if (this.y <= 50 || this.y >= WORLD_SIZE - 50) this.vy *= -0.5;
+                this.x = clamp(this.x, 50, WORLD_SIZE - 50);
+                this.y = clamp(this.y, 50, WORLD_SIZE - 50);
+
+                // Timers
+                if (this.sermonCooldown > 0) this.sermonCooldown -= dt;
+
+                // Gain influence from followers
+                const myFollowers = game.followers.filter(f => f.faith === this.faith);
+                this.influence += myFollowers.length * 0.02;
+
+                // Cap Health
+                this.hp = clamp(this.hp, 0, this.maxHp);
+
+                // Regenerate HP when in own territory (base)
+                const myTerritory = game.territories.find(t => t.faith === this.faith);
+                if (myTerritory) {
+                    const distToBase = dist(this, myTerritory);
+                    if (distToBase < myTerritory.radius && this.hp < this.maxHp) {
+                        this.hp += dt * 0.5; // Regen 0.5 HP per second in base
+                    }
+                }
+
+                // Rival Territory Exclusion
+                if (!this.isPlayer) {
+                    const playerTerr = game.territories.find(t => t.faith === 'player');
+                    if (playerTerr) {
+                        const d = dist(this, playerTerr);
+                        // Prevent entry
+                        if (d < playerTerr.radius + this.radius) {
+                            const angle = Math.atan2(this.y - playerTerr.y, this.x - playerTerr.x);
+                            this.x = playerTerr.x + Math.cos(angle) * (playerTerr.radius + this.radius);
+                            this.y = playerTerr.y + Math.sin(angle) * (playerTerr.radius + this.radius);
+                        }
+                    }
+                }
+
+                // Auto-Sermon: 20-second sermon when on Holy Mountain ledge
+                if (this.isPlayer && this.onLedge && this.sermonCooldown <= 0) {
+                    const myFollowers = game.followers.filter(f => f.faith === 'player');
+                    if (myFollowers.length >= 5) {
+                        if (!this.isPreaching) {
+                            // Start preaching
+                            this.isPreaching = true;
+                            this.preachingTimer = 20; // 20 seconds duration
+                            game.showMessage("📜 Sermon started! Stay on the ledge for 20 seconds...");
+                        } else {
+                            // Continue preaching - decrement timer
+                            this.preachingTimer -= dt;
+
+                            // Spawn speech bubbles periodically during sermon
+                            if (Math.random() < dt * 0.5) {
+                                game.speechBubbles.push(new SpeechBubble(this.x, this.y - 30, gibberish()));
+                            }
+
+                            // Sermon complete!
+                            if (this.preachingTimer <= 0) {
+                                this.sermonCooldown = 180; // 3 minutes cooldown
+                                this.influence += 50;
+                                this.hp = Math.min(this.maxHp, this.hp + 5);
+
+                                // Sermon on the Mount: Converts even enemy hardliners!
+                                let convertedCount = 0;
+                                for (const f of game.followers) {
+                                    if (f.faith !== 'player' && f.type === 'hardliner') {
+                                        const d = dist(this, f);
+                                        if (d < 250) { // Sermon has wide reach
+                                            f.faith = 'player';
+                                            f.type = 'regular';
+                                            f.beliefs.player = 50;
+                                            convertedCount++;
+                                            game.particles.push(new Particle(f.x, f.y, '#ffd700'));
+                                        }
+                                    }
+                                }
+
+                                let msg = "✨ Sermon complete! +50 Influence, +5 Stamina.";
+                                if (convertedCount > 0) {
+                                    msg += ` Converted ${convertedCount} hardliner(s)!`;
+                                }
+                                game.showMessage(msg);
+                                this.isPreaching = false;
+                            }
+                        }
+                    }
+                } else if (this.isPlayer && this.isPreaching && !this.onLedge) {
+                    // Left the ledge while preaching - cancel sermon
+                    this.isPreaching = false;
+                    this.preachingTimer = 0;
+                    game.showMessage("Sermon interrupted! Stay on the ledge.");
+                }
+            }
+
+            updateAI(dt, game) {
+                // RETALIATION LOGIC
+                // If attacked by warriors, start building warriors!
+                const safeDistance = 300;
+                const threateningWarriors = game.followers.filter(f =>
+                    f.type === 'warrior' &&
+                    f.faith !== this.faith &&
+                    dist(this, f) < safeDistance
+                );
+
+                if (threateningWarriors.length > 0 && this.influence >= 100) {
+                    // Check if I have warriors already
+                    const myWarriors = game.followers.filter(f => f.faith === this.faith && f.type === 'warrior');
+
+                    // If outnumbered or just want to defend, build warriors
+                    if (myWarriors.length < threateningWarriors.length + 2) {
+                        // Find a convertable follower
+                        const candidates = game.followers.filter(f => f.faith === this.faith && f.type === 'regular');
+                        candidates.sort((a, b) => dist(this, a) - dist(this, b));
+
+                        if (candidates.length > 0) {
+                            const recruit = candidates[0];
+                            this.influence -= 100;
+                            recruit.type = 'warrior';
+                            recruit.hp = 10;
+                            recruit.attackPower = 5;
+                            // Target the threats! (Rough logic: attack the faith of the nearest threat)
+                            recruit.attackTarget = threateningWarriors[0].faith;
+
+                            // Visual
+                            recruit.speechText = "⚔️";
+                            recruit.speechTimer = 2;
+                            for (let i = 0; i < 5; i++) game.particles.push(new Particle(recruit.x, recruit.y, '#ff4444'));
+                        }
+                    }
+                }
+
+                this.aiTimer -= dt;
+
+                if (this.aiTimer <= 0) {
+                    this.aiTimer = randRange(2, 5);
+
+                    // Find nearest open-minded or rival follower
+                    let targets = game.followers.filter(f =>
+                        f.faith !== this.faith &&
+                        (f.faith === 'open' || f.beliefs[this.faith] < CONVERSION_THRESHOLD)
+                    );
+
+                    if (targets.length > 0) {
+                        targets.sort((a, b) => dist(this, a) - dist(this, b));
+                        this.aiTarget = targets[0];
+                    } else {
+                        // Wander
+                        this.aiTarget = {
+                            x: randRange(300, WORLD_SIZE - 300),
+                            y: randRange(300, WORLD_SIZE - 300)
+                        };
+                    }
+                }
+
+                if (this.aiTarget) {
+                    const d = dist(this, this.aiTarget);
+                    if (d > 30) {
+                        const angle = Math.atan2(this.aiTarget.y - this.y, this.aiTarget.x - this.x);
+                        this.vx += Math.cos(angle) * 0.15;
+                        this.vy += Math.sin(angle) * 0.15;
+                    }
+                }
+
+                // Check territory establishment
+                // Skip if converted (they use their master's territory) or if faith already has a territory
+                const myFollowers = game.followers.filter(f => f.faith === this.faith);
+                const faithHasTerritory = game.territories.some(t => t.faith === this.faith);
+                if (!this.isConverted && !this.territory && !faithHasTerritory && myFollowers.length >= 10 && Math.random() < 0.001) {
+                    this.territory = new Territory(this.x, this.y, this.faith);
+                    game.territories.push(this.territory);
+                    game.structures.push(new Structure(this.x, this.y, 'monument', this.faith));
+
+                    // Add a house nearby (same as player logic)
+                    const houseAngle = Math.random() * Math.PI * 2;
+                    game.structures.push(new Structure(
+                        this.x + Math.cos(houseAngle) * 80,
+                        this.y + Math.sin(houseAngle) * 80,
+                        'house', this.faith
+                    ));
+                }
+            }
+
+            // Special AI for Nairb - runs AWAY from followers and smacks them
+            updateNairbAI(dt, game) {
+                // Find nearby followers of Nairb's faith
+                const myFollowers = game.followers.filter(f => f.faith === this.faith);
+
+                if (myFollowers.length > 0) {
+                    // Calculate center of mass of followers
+                    let cx = 0, cy = 0;
+                    for (const f of myFollowers) {
+                        cx += f.x;
+                        cy += f.y;
+                    }
+                    cx /= myFollowers.length;
+                    cy /= myFollowers.length;
+
+                    // RUN AWAY from followers!
+                    const awayAngle = Math.atan2(this.y - cy, this.x - cx);
+                    this.vx += Math.cos(awayAngle) * 0.25;
+                    this.vy += Math.sin(awayAngle) * 0.25;
+                }
+
+                // Occasionally smack nearby followers
+                this.smackTimer -= dt;
+                if (this.smackTimer <= 0) {
+                    this.smackTimer = randRange(3, 8); // Smack every 3-8 seconds
+
+                    // Find closest follower to smack
+                    const nearbyFollowers = myFollowers.filter(f => dist(this, f) < 60);
+                    if (nearbyFollowers.length > 0) {
+                        const victim = nearbyFollowers[Math.floor(Math.random() * nearbyFollowers.length)];
+                        // Smack them away!
+                        const smackAngle = Math.atan2(victim.y - this.y, victim.x - this.x);
+                        victim.vx += Math.cos(smackAngle) * 8;
+                        victim.vy += Math.sin(smackAngle) * 8;
+                        victim.hp -= 1; // Light damage
+
+                        // Smack particle effect
+                        game.particles.push(new Particle(victim.x, victim.y, '#ff6600'));
+                        game.speechBubbles.push(new SpeechBubble(this.x, this.y - 30, "Go away!"));
+                    }
+                }
+            }
+
+            draw(ctx, camera) {
+                const sx = (this.x - camera.x) * camera.zoom + canvas.width / 2;
+                const sy = (this.y - camera.y) * camera.zoom + canvas.height / 2;
+                const sr = this.radius * camera.zoom;
+
+                // Water walk FX
+                if (this.waterWalkTimer > 0) {
+                    const time = Date.now() / 200;
+                    ctx.strokeStyle = '#40e0d0';
+                    ctx.lineWidth = 3 * camera.zoom;
+                    // Ripples
+                    for (let i = 0; i < 3; i++) {
+                        const r = sr * (1.5 + Math.sin(time + i) * 0.3);
+                        ctx.globalAlpha = 0.5 * (1 - r / (sr * 2.5));
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // Mass Convert Highlight
+                if (this.isPlayer && this.influence >= 700) {
+                    const time = Date.now() / 1000;
+                    ctx.save();
+                    ctx.strokeStyle = '#ffd700'; // Gold/Holy color
+                    ctx.globalAlpha = 0.3 + Math.sin(time * 3) * 0.1;
+                    ctx.lineWidth = 2 * camera.zoom;
+                    ctx.setLineDash([10 * camera.zoom, 10 * camera.zoom]);
+                    ctx.lineDashOffset = -time * 20 * camera.zoom;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 150 * camera.zoom, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Glow effect (Holy Aura)
+                const glowSize = 1 + Math.sin(this.glowPhase) * 0.15;
+                const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr * 2.5 * glowSize);
+                gradient.addColorStop(0, this.getColor() + '60');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(sx, sy, sr * 2.5 * glowSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // === PROPHET VISUALS ===
+                // Robes (Flowing shape)
+                ctx.fillStyle = this.getColor();
+                ctx.beginPath();
+                ctx.moveTo(sx, sy - sr * 1.5); // Top of head level
+                // Left shoulder/arm
+                ctx.quadraticCurveTo(sx - sr * 1.5, sy - sr * 0.5, sx - sr * 1.2, sy + sr * 1.5);
+                // Bottom hem
+                ctx.quadraticCurveTo(sx, sy + sr * 1.8, sx + sr * 1.2, sy + sr * 1.5);
+                // Right shoulder/arm
+                ctx.quadraticCurveTo(sx + sr * 1.5, sy - sr * 0.5, sx, sy - sr * 1.5);
+                ctx.fill();
+
+                // Outline
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2 * camera.zoom;
+                ctx.stroke();
+
+                // Staff (Right hand)
+                ctx.strokeStyle = '#8D6E63'; // Wood
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.beginPath();
+                ctx.moveTo(sx + sr * 0.8, sy + sr * 1.5); // Bottom
+                ctx.lineTo(sx + sr * 1.0, sy - sr * 1.2); // Top
+                ctx.stroke();
+
+                // Staff Symbol (Unique per Prophet)
+                const gemX = sx + sr * 1.0;
+                const gemY = sy - sr * 1.2;
+                const gemSize = sr * 0.4;
+
+                if (this.isNairb) {
+                    // Sandal 🩴
+                    ctx.font = `${gemSize * 2}px serif`;
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText('🩴', gemX - gemSize, gemY + gemSize / 2);
+                } else if (this.isPlayer) {
+                    // Star 🌟
+                    ctx.fillStyle = '#ffd700';
+                    ctx.beginPath();
+                    for (let i = 0; i < 5; i++) {
+                        const rot = Math.PI / 2 * 3;
+                        const step = Math.PI / 5;
+                        let ang = rot + i * step * 2;
+                        ctx.lineTo(gemX + Math.cos(ang) * gemSize, gemY + Math.sin(ang) * gemSize);
+                        ang += step;
+                        ctx.lineTo(gemX + Math.cos(ang) * (gemSize / 2), gemY + Math.sin(ang) * (gemSize / 2));
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+
+                } else if (this.faith === 'rival1') {
+                    // Crescent Moon 🌙 (Red)
+                    ctx.fillStyle = '#ff4444';
+                    ctx.beginPath();
+                    ctx.arc(gemX, gemY, gemSize, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Cutout (using background color approximation or composite)
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.beginPath();
+                    ctx.arc(gemX + gemSize * 0.4, gemY - gemSize * 0.3, gemSize * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+
+                } else if (this.faith === 'rival2') {
+                    // Diamond ◆ (Blue)
+                    ctx.fillStyle = '#4444ff';
+                    ctx.beginPath();
+                    ctx.moveTo(gemX, gemY - gemSize);
+                    ctx.lineTo(gemX + gemSize, gemY);
+                    ctx.lineTo(gemX, gemY + gemSize);
+                    ctx.lineTo(gemX - gemSize, gemY);
+                    ctx.closePath();
+                    ctx.fill();
+
+                } else {
+                    // Leaf 🍃 (Green)
+                    ctx.fillStyle = '#44ff44';
+                    ctx.beginPath();
+                    ctx.ellipse(gemX, gemY, gemSize, gemSize * 0.4, Math.PI / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Head
+                ctx.fillStyle = '#ffdbac'; // Skin
+                ctx.beginPath();
+                ctx.arc(sx, sy - sr * 0.6, sr * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Headpiece / Crown / Hood
+                ctx.fillStyle = this.getColor(); // Matching robes
+                ctx.beginPath();
+                ctx.arc(sx, sy - sr * 0.6, sr * 0.7, Math.PI, 0); // Hat/Hood top
+                ctx.lineTo(sx + sr * 0.7, sy - sr * 0.6);
+                ctx.lineTo(sx - sr * 0.7, sy - sr * 0.6);
+                ctx.fill();
+
+                // Face (Eyes)
+                ctx.fillStyle = '#000';
+                const headY = sy - sr * 0.6;
+                const headR = sr * 0.6;
+                ctx.fillRect(sx - headR * 0.3, headY - headR * 0.1, headR * 0.15, headR * 0.15);
+                ctx.fillRect(sx + headR * 0.15, headY - headR * 0.1, headR * 0.15, headR * 0.15);
+
+                // Stamina Bar (Only if damaged/fighting)
+                if (this.hp < this.maxHp) {
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(sx - sr, sy - sr * 2.5, sr * 2, 4 * camera.zoom);
+                    ctx.fillStyle = '#ffaa00'; // Orange for Stamina/Fighting Spirit
+                    ctx.fillRect(sx - sr, sy - sr * 2.5, sr * 2 * (this.hp / this.maxHp), 4 * camera.zoom);
+                }
+
+                // Water Walk Timer Bar (GDD §3.2)
+                if (this.waterWalkTimer > 0) {
+                    const barY = sy + sr * 2;
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(sx - sr, barY, sr * 2, 4 * camera.zoom);
+                    ctx.fillStyle = '#4fc3f7'; // Water blue
+                    ctx.fillRect(sx - sr, barY, sr * 2 * (this.waterWalkTimer / 15), 4 * camera.zoom);
+                    // Wave icon
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `${sr * 0.5}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🌊', sx, barY + sr * 0.6);
+                }
+
+                // Sermon Progress Bar (when preaching)
+                if (this.isPreaching && this.preachingTimer > 0) {
+                    const barY = sy - sr * 3;
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(sx - sr * 1.5, barY, sr * 3, 5 * camera.zoom);
+                    ctx.fillStyle = '#ffd700'; // Gold for sermon
+                    ctx.fillRect(sx - sr * 1.5, barY, sr * 3 * (1 - this.preachingTimer / 20), 5 * camera.zoom);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `${sr * 0.4}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('📜', sx, barY - sr * 0.3);
+                }
+            }
+        }
+
+
+        class Follower {
+            constructor(x, y, faith = 'open') {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.faith = faith;
+                this.radius = 12; // Increased size slightly
+                this.hp = 5;
+                this.beliefs = { player: 0, rival1: 0, rival2: 0, rival3: 0, nairb: 0 };
+                this.type = 'regular'; // open, regular, hardliner, warrior, worker, greedy, defender, sandal
+                this.followTarget = null;
+                this.wanderAngle = Math.random() * Math.PI * 2;
+                this.wanderTimer = 0;
+                this.goldTimer = 0;
+                this.attackPower = 0; // Default, set higher for warriors/defenders
+                this.attackTarget = null; // For hostile warriors
+                this.sayTimer = 0; // Timer for "We are all individuals!" speech
+
+                if (faith === 'open') {
+                    this.type = 'open';
+                    // 10% chance to be greedy
+                    if (Math.random() < 0.1) {
+                        this.type = 'greedy';
+                        this.faith = 'greedy';
+                    }
+                }
+            }
+
+            getColor() {
+                if (this.type === 'greedy') {
+                    // If bribed (player faith), be player green. If unbribed (greedy/open), be gold.
+                    if (this.faith === 'player') return COLORS.player;
+                    return COLORS.gold;
+                }
+                if (this.faith === 'open') return COLORS.openMinded;
+                if (this.faith === 'neutral') return COLORS.neutral;
+                if (this.faith === 'player') return COLORS.player;
+                if (this.faith === 'nairb') return COLORS.nairb;
+                if (this.faith === 'rival1') return COLORS.rival1;
+                if (this.faith === 'rival2') return COLORS.rival2;
+                return COLORS.rival3;
+            }
+
+            update(dt, game) {
+                // WARRIOR ATTACK BEHAVIOR
+                if (this.type === 'warrior' && this.attackTarget === 'player') {
+                    // Find nearest player follower to attack
+                    const targets = game.followers.filter(f => f.faith === 'player' && f.type !== 'warrior');
+                    if (targets.length > 0) {
+                        // Find closest target
+                        let closest = null;
+                        let closestDist = Infinity;
+                        for (const t of targets) {
+                            const d = dist(this, t);
+                            if (d < closestDist) {
+                                closestDist = d;
+                                closest = t;
+                            }
+                        }
+                        if (closest) {
+                            // Chase the target
+                            const angle = Math.atan2(closest.y - this.y, closest.x - this.x);
+                            this.vx += Math.cos(angle) * 0.4; // Faster than normal followers
+                            this.vy += Math.sin(angle) * 0.4;
+
+                            // Attack if close enough
+                            if (closestDist < this.radius + closest.radius + 5) {
+                                closest.hp -= this.attackPower * dt;
+                                // Hit particles
+                                if (Math.random() < 0.1) {
+                                    game.particles.push(new Particle(closest.x, closest.y, '#ff4444'));
+                                }
+                                // Kill follower if HP depleted
+                                if (closest.hp <= 0) {
+                                    const idx = game.followers.indexOf(closest);
+                                    if (idx >= 0) {
+                                        game.followers.splice(idx, 1);
+                                        game.particles.push(new Particle(closest.x, closest.y, '#333'));
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // No targets left - war is over, warriors become regular followers
+                        this.type = 'regular';
+                        this.attackTarget = null;
+                        this.faith = 'open'; // Return to open-minded
+                    }
+                    // Warriors skip normal following behavior
+                    // Continue to apply velocity and collision below
+                }
+
+                // PLAYER WARRIOR BEHAVIOR (attacks ALL rival followers)
+                if (this.type === 'warrior' && this.faith === 'player') {
+                    // Find nearest rival follower to attack (any faith that isn't player)
+                    const enemies = game.followers.filter(f =>
+                        f.faith !== 'player' &&
+                        f.faith !== 'open' &&
+                        f.faith !== 'neutral' &&
+                        f.type !== 'greedy'
+                    );
+
+                    if (enemies.length > 0) {
+                        let closest = null;
+                        let closestDist = Infinity;
+                        for (const e of enemies) {
+                            const d = dist(this, e);
+                            if (d < closestDist) {
+                                closestDist = d;
+                                closest = e;
+                            }
+                        }
+                        if (closest) {
+                            // Chase enemy aggressively
+                            const angle = Math.atan2(closest.y - this.y, closest.x - this.x);
+                            this.vx += Math.cos(angle) * 0.5; // Faster chase
+                            this.vy += Math.sin(angle) * 0.5;
+
+                            // Attack if close enough
+                            if (closestDist < this.radius + closest.radius + 10) {
+                                closest.hp -= (this.attackPower || 5) * dt;
+                                // Combat particles
+                                if (Math.random() < 0.15) {
+                                    game.particles.push(new Particle(closest.x, closest.y, '#ff4444'));
+                                    game.particles.push(new Particle(this.x, this.y, '#44ff44'));
+                                }
+                                // Kill follower
+                                if (closest.hp <= 0) {
+                                    const idx = game.followers.indexOf(closest);
+                                    if (idx >= 0) {
+                                        game.followers.splice(idx, 1);
+                                        // Death smoke
+                                        for (let i = 0; i < 5; i++) {
+                                            game.particles.push(new Particle(closest.x, closest.y, '#666'));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // No enemies left - war is over, revert to hardliner
+                        this.type = 'hardliner';
+                        this.attackPower = 0;
+                    }
+                }
+
+                // DEFENDER BEHAVIOR (GDD §4.2: 5HP, 2 Power, cannot leave territory)
+                if (this.type === 'defender') {
+                    // Set defender stats
+                    if (!this.defenderInit) {
+                        this.defenderInit = true;
+                        this.hp = 5;
+                        this.attackPower = 2;
+                    }
+
+                    // Find any territory of same faith
+                    const myTerritory = game.territories.find(t => t.faith === this.faith);
+                    if (myTerritory) {
+                        const distToTerr = dist(this, myTerritory);
+
+                        // Stay inside territory
+                        if (distToTerr > myTerritory.radius - 30) {
+                            const angle = Math.atan2(myTerritory.y - this.y, myTerritory.x - this.x);
+                            this.vx += Math.cos(angle) * 0.3;
+                            this.vy += Math.sin(angle) * 0.3;
+                        }
+
+                        // Attack enemy warriors that enter territory
+                        const invaders = game.followers.filter(f =>
+                            f.type === 'warrior' &&
+                            f.faith !== this.faith &&
+                            dist(f, myTerritory) < myTerritory.radius
+                        );
+
+                        if (invaders.length > 0) {
+                            // Find closest invader
+                            invaders.sort((a, b) => dist(this, a) - dist(this, b));
+                            const target = invaders[0];
+                            const targetDist = dist(this, target);
+
+                            // Chase invader
+                            const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                            this.vx += Math.cos(angle) * 0.3;
+                            this.vy += Math.sin(angle) * 0.3;
+
+                            // Attack if close
+                            if (targetDist < this.radius + target.radius + 5) {
+                                target.hp -= this.attackPower * dt;
+                                if (Math.random() < 0.1) {
+                                    game.particles.push(new Particle(target.x, target.y, '#4444ff'));
+                                }
+                                if (target.hp <= 0) {
+                                    const idx = game.followers.indexOf(target);
+                                    if (idx >= 0) game.followers.splice(idx, 1);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // SANDAL FOLLOWER BEHAVIOR (Nairb's followers)
+                if (this.type === 'sandal') {
+                    // Start with default target
+                    let target = null;
+
+                    // If converted to player, follow the PLAYER
+                    if (this.faith === 'player') {
+                        target = game.getPlayer();
+                    } else {
+                        // Otherwise follow Nairb (if he exists and is still Nairb)
+                        target = game.prophets.find(p => p.isNairb);
+                    }
+
+                    if (target) {
+                        const d = dist(this, target);
+                        // Chase target eagerley but slowly
+                        if (d > 30) {
+                            const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                            this.vx += Math.cos(angle) * 0.08; // Slower than regular followers
+                            this.vy += Math.sin(angle) * 0.08;
+                        }
+                    }
+
+                    // Periodically say "We are all individuals!"
+                    this.sayTimer -= dt;
+                    if (this.sayTimer <= 0) {
+                        this.sayTimer = randRange(8, 20); // Say every 8-20 seconds
+                        if (Math.random() < 0.5) {
+                            game.speechBubbles.push(new SpeechBubble(this.x, this.y - 20, "We are all individuals!"));
+                        } else {
+                            game.speechBubbles.push(new SpeechBubble(this.x, this.y - 20, "Yes! We're all different!"));
+                        }
+                    }
+                }
+
+                // Worker Gold Gen
+                if (this.type === 'worker' && this.faith === 'player') {
+                    this.goldTimer += dt;
+                    if (this.goldTimer >= 5) {
+                        this.goldTimer = 0;
+                        game.prophets.find(p => p.isPlayer).gold += 1;
+                        // Pop up FX
+                        // TODO: text particle
+                    }
+                }
+
+                // Find prophet of same faith to follow
+                const myProphet = game.prophets.find(p => p.faith === this.faith || (this.faith === 'player' && p.isPlayer));
+
+                // Worker Construction Logic
+                let findingWork = false;
+                if (this.faith === 'player' && this.type === 'worker') {
+                    // Find unfinished monument
+                    const site = game.structures.find(s => s.faith === 'player' && s.type === 'monument' && s.growth < 1.0);
+                    if (site) {
+                        findingWork = true;
+                        const d = dist(this, site);
+                        // Move to it if not super close (Logic: Structure.update checks radius + 60, so < 100 is good)
+                        // If we are far, run to it!
+                        if (d > 40) {
+                            const angle = Math.atan2(site.y - this.y, site.x - this.x);
+                            this.vx += Math.cos(angle) * 0.3;
+                            this.vy += Math.sin(angle) * 0.3;
+                        }
+                    }
+                }
+
+                // Territory Constraint for Regular Player Followers
+                let constrained = false;
+                if (!findingWork && this.faith === 'player' && this.type !== 'hardliner') {
+                    const myTerritories = game.territories.filter(t => t.faith === 'player');
+                    if (myTerritories.length > 0) {
+                        // Check if inside ANY territory
+                        let safe = false;
+                        let nearestTerr = null;
+                        let minDist = Infinity;
+
+                        for (const t of myTerritories) {
+                            const d = dist(this, t);
+                            if (d <= t.radius) {
+                                safe = true;
+                                break;
+                            }
+                            if (d < minDist) {
+                                minDist = d;
+                                nearestTerr = t;
+                            }
+                        }
+
+                        if (!safe && nearestTerr) {
+                            // Outside! Go back to nearest.
+                            constrained = true;
+                            const angle = Math.atan2(nearestTerr.y - this.y, nearestTerr.x - this.x);
+                            this.vx += Math.cos(angle) * 0.2;
+                            this.vy += Math.sin(angle) * 0.2;
+                        }
+                    }
+                }
+
+                if (!findingWork && !constrained && myProphet && this.faith !== 'open' && this.faith !== 'neutral' && this.faith !== 'greedy') {
+                    const d = dist(this, myProphet);
+                    // Only follow if prophet is on valid land (not near boundary or in water)
+                    const prophetNearBorder = myProphet.x < 100 || myProphet.x > WORLD_SIZE - 100 || myProphet.y < 100 || myProphet.y > WORLD_SIZE - 100;
+                    const prophetTerrain = game.getTerrainAt(myProphet.x, myProphet.y);
+                    const prophetInWater = prophetTerrain === 'water' && myProphet.waterWalkTimer <= 0;
+
+                    // Check if lake is between follower and prophet
+                    const followerToLake = Math.sqrt((this.x - game.lakeX) ** 2 + (this.y - game.lakeY) ** 2);
+                    const prophetToLake = Math.sqrt((myProphet.x - game.lakeX) ** 2 + (myProphet.y - game.lakeY) ** 2);
+                    const lakeBetween = followerToLake < game.lakeRadius + 50 && prophetToLake < game.lakeRadius + 50 &&
+                        Math.sign(this.x - game.lakeX) !== Math.sign(myProphet.x - game.lakeX);
+
+                    if (d > 50 && !prophetNearBorder && !prophetInWater && !lakeBetween) {
+                        const angle = Math.atan2(myProphet.y - this.y, myProphet.x - this.x);
+                        this.vx += Math.cos(angle) * 0.1;
+                        this.vy += Math.sin(angle) * 0.1;
+                    } else if (prophetNearBorder || prophetInWater || lakeBetween) {
+                        // Don't follow into border/water/lake, wander instead
+                        this.wander(dt);
+                    }
+                } else if (!findingWork && !constrained) {
+                    this.wander(dt);
+                }
+
+                // Apply velocity
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.92;
+                this.vy *= 0.92;
+
+                // Clamp speed
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > FOLLOWER_SPEED) {
+                    this.vx = (this.vx / speed) * FOLLOWER_SPEED;
+                    this.vy = (this.vy / speed) * FOLLOWER_SPEED;
+                }
+
+                // Terrain collision
+                const terrain = game.getTerrainAt(this.x, this.y);
+                if (terrain === 'water') {
+                    // Check if lake or ocean
+                    const lakeDist = Math.sqrt((this.x - game.lakeX) ** 2 + (this.y - game.lakeY) ** 2);
+                    if (lakeDist < game.lakeRadius) {
+                        // Push OUT of lake - stronger push and full velocity reset
+                        const angle = Math.atan2(this.y - game.lakeY, this.x - game.lakeX);
+                        this.x += Math.cos(angle) * 6;
+                        this.y += Math.sin(angle) * 6;
+                        // Zero out velocity completely and redirect wander away from lake
+                        this.vx *= 0.2;
+                        this.vy *= 0.2;
+                        this.wanderAngle = angle + (Math.random() - 0.5) * 0.5; // Point away from lake
+                    } else {
+                        // Push IN from ocean - stronger push and zero velocity into ocean
+                        const angle = Math.atan2(this.y - WORLD_SIZE / 2, this.x - WORLD_SIZE / 2);
+                        this.x -= Math.cos(angle) * 5;
+                        this.y -= Math.sin(angle) * 5;
+                        // Zero out velocity component toward ocean
+                        this.vx *= 0.3;
+                        this.vy *= 0.3;
+                        // Redirect wander angle to point inland
+                        this.wanderAngle = angle + Math.PI + (Math.random() - 0.5) * 0.5;
+                    }
+                }
+
+                // Mountain collision
+                for (const m of game.mountains) {
+                    const d = dist(this, m);
+                    if (d < m.radius + this.radius) {
+                        const angle = Math.atan2(this.y - m.y, this.x - m.x);
+                        this.x = m.x + Math.cos(angle) * (m.radius + this.radius);
+                        this.y = m.y + Math.sin(angle) * (m.radius + this.radius);
+                    }
+                }
+
+                // World bounds - bounce and redirect wander angle
+                if (this.x <= 60 || this.x >= WORLD_SIZE - 60) {
+                    this.vx *= -0.8;
+                    this.wanderAngle = Math.PI - this.wanderAngle; // Flip horizontal direction
+                }
+                if (this.y <= 60 || this.y >= WORLD_SIZE - 60) {
+                    this.vy *= -0.8;
+                    this.wanderAngle = -this.wanderAngle; // Flip vertical direction
+                }
+                this.x = clamp(this.x, 55, WORLD_SIZE - 55);
+                this.y = clamp(this.y, 55, WORLD_SIZE - 55);
+
+                // Conversion logic
+                if (this.type !== 'greedy') {
+                    this.updateConversion(game);
+                }
+
+                // Update type based on belief strength (skip special unit types)
+                if (this.faith !== 'open' && this.faith !== 'neutral' &&
+                    this.type !== 'worker' && this.type !== 'greedy' &&
+                    this.type !== 'sandal' && this.type !== 'defender' && this.type !== 'warrior') {
+                    const belief = this.beliefs[this.faith];
+                    if (belief >= 80) {
+                        this.type = 'hardliner';
+                    } else {
+                        this.type = 'regular';
+                    }
+                }
+            }
+
+            wander(dt) {
+                this.wanderTimer -= dt;
+                if (this.wanderTimer <= 0) {
+                    this.wanderTimer = randRange(1, 3);
+                    this.wanderAngle += randRange(-1, 1);
+                }
+                this.vx += Math.cos(this.wanderAngle) * 0.02;
+                this.vy += Math.sin(this.wanderAngle) * 0.02;
+            }
+
+            updateConversion(game) {
+                // Check nearby prophets
+                for (const prophet of game.prophets) {
+                    const d = dist(this, prophet);
+                    if (d < CONVERSION_RADIUS) {
+                        const faithKey = prophet.isPlayer ? 'player' : prophet.faith;
+                        // Ethics Bonus
+                        let radiusMult = 1;
+                        if (prophet.isPlayer && prophet.ethics > 50) radiusMult = 1.2;
+
+                        if (d < CONVERSION_RADIUS * radiusMult) {
+                            const conversionRate = 0.5 * (1 - d / (CONVERSION_RADIUS * radiusMult));
+
+                            // Hardliners resist more
+                            const resistance = this.type === 'hardliner' ? 0.2 : 1;
+                            this.beliefs[faithKey] += conversionRate * resistance;
+
+                            // Speech bubbles DURING conversion - above PROPHET (who is talking)
+                            if (Math.random() < 0.02 && this.beliefs[faithKey] > 10 && this.beliefs[faithKey] < CONVERSION_THRESHOLD) {
+                                game.speechBubbles.push(new SpeechBubble(prophet.x, prophet.y - 25, gibberish()));
+                            }
+
+                            // Check for conversion
+                            if (this.beliefs[faithKey] >= CONVERSION_THRESHOLD) {
+                                if (this.faith !== faithKey) {
+                                    // First neutralize if was rival
+                                    if (this.faith !== 'open' && this.faith !== 'neutral' && this.faith !== faithKey) {
+                                        this.faith = 'neutral';
+                                        this.beliefs = { player: 0, rival1: 0, rival2: 0, rival3: 0 };
+                                        this.beliefs[faithKey] = 15;
+                                        // Speech bubble above prophet
+                                        game.speechBubbles.push(new SpeechBubble(prophet.x, prophet.y - 25, gibberish()));
+                                    } else {
+                                        this.faith = faithKey;
+                                        this.type = 'regular';
+                                        // Speech bubble above prophet
+                                        game.speechBubbles.push(new SpeechBubble(prophet.x, prophet.y - 25, gibberish()));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Group conversion (3+ hardliners nearby)
+                if (this.faith === 'open' || this.faith === 'neutral') {
+                    const faithCounts = {};
+                    for (const other of game.followers) {
+                        if (other !== this && other.type === 'hardliner' && dist(this, other) < 60) {
+                            faithCounts[other.faith] = (faithCounts[other.faith] || 0) + 1;
+                        }
+                    }
+                    for (const [faith, count] of Object.entries(faithCounts)) {
+                        if (count >= HARDLINER_GROUP_SIZE) {
+                            this.beliefs[faith] += 0.1;
+                        }
+                    }
+                }
+            }
+
+            draw(ctx, camera) {
+                const sx = (this.x - camera.x) * camera.zoom + canvas.width / 2;
+                const sy = (this.y - camera.y) * camera.zoom + canvas.height / 2;
+                const sr = this.radius * camera.zoom;
+
+                // Polytopia Style: Triangle Body + Circle Head
+
+                ctx.fillStyle = this.getColor();
+
+                // Body (Triangle)
+                ctx.beginPath();
+                const bodyH = sr * 2.2;
+                const bodyW = sr * 1.6;
+                ctx.moveTo(sx - bodyW / 2, sy + bodyH / 2); // Bottom Left
+                ctx.lineTo(sx + bodyW / 2, sy + bodyH / 2); // Bottom Right
+                ctx.lineTo(sx, sy - bodyH / 4); // Top point
+                ctx.closePath();
+                ctx.fill();
+
+                // Outline Body
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1 * camera.zoom;
+                ctx.stroke();
+
+                // Head (Circle)
+                ctx.fillStyle = this.getColor(); // Or skin tone
+                if (this.type === 'greedy') ctx.fillStyle = '#ffd700';
+
+                ctx.beginPath();
+                ctx.arc(sx, sy - bodyH / 4, sr * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Symbols
+                ctx.fillStyle = '#fff';
+                // Torso position
+                const symbolY = sy + sr * 0.5;
+                const headY = sy - bodyH / 4;
+                const fontSz = sr * 1.5;
+                ctx.font = `bold ${fontSz}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (this.type === 'open') {
+                    // Empty head with open lid (GDD §5.1)
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(sx, headY, sr * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1 * camera.zoom;
+                    ctx.stroke();
+                    // Open lid
+                    ctx.beginPath();
+                    ctx.arc(sx, headY - sr * 0.3, sr * 0.4, Math.PI * 0.8, Math.PI * 0.2, true);
+                    ctx.stroke();
+                } else if (this.type === 'hardliner') {
+                    ctx.fillText('🪨', sx, symbolY);
+                } else if (this.type === 'worker') {
+                    ctx.fillText('🔨', sx, symbolY);
+                } else if (this.type === 'warrior') {
+                    ctx.fillText('🪓', sx, symbolY); // Club for warriors
+                } else if (this.type === 'defender') {
+                    ctx.fillText('🛡️', sx, symbolY);
+                } else if (this.type === 'sandal') {
+                    // Sandal follower holding sandal up in the air
+                    // Draw arm reaching up
+                    ctx.strokeStyle = '#ffdbac'; // Skin color
+                    ctx.lineWidth = 2 * camera.zoom;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, sy - bodyH / 4); // Start from head area
+                    ctx.lineTo(sx + sr * 0.3, sy - bodyH / 4 - sr * 1.5); // Arm reaching up
+                    ctx.stroke();
+                    // Draw sandal held in the air
+                    ctx.fillText('🩴', sx + sr * 0.3, sy - bodyH / 4 - sr * 1.8);
+                } else if (this.type === 'greedy') {
+                    ctx.fillStyle = '#1a4';
+                    ctx.fillText('$', sx, symbolY);
+                } else {
+                    // Face for regular
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(sx - sr * 0.2, headY - sr * 0.1, sr * 0.2, sr * 0.2);
+                    ctx.fillRect(sx + sr * 0.1, headY - sr * 0.1, sr * 0.2, sr * 0.2);
+                }
+
+                // Border
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 1 * camera.zoom;
+                ctx.stroke();
+            }
+        }
+
+        class Structure {
+            constructor(x, y, type, faith) {
+                this.x = x;
+                this.y = y;
+                this.type = type; // monument, house, barracks
+                this.faith = faith;
+                this.radius = type === 'monument' ? 200 : 25;
+                this.spawnTimer = 0;
+                this.glowPhase = 0;
+                this.growth = 0;
+                this.hasSpawnedHouse = false;
+            }
+
+            getColor() {
+                if (this.faith === 'player') return COLORS.player;
+                if (this.faith === 'rival1') return COLORS.rival1;
+                if (this.faith === 'rival2') return COLORS.rival2;
+                return COLORS.rival3;
+            }
+
+            update(dt, game) {
+                this.glowPhase += dt * 2;
+
+                // Growth animation - ONLY if workers are nearby
+                if (this.type === 'monument') {
+                    if (this.growth < 1.0) {
+                        // Find workers of same faith nearby
+                        const workers = game.followers.filter(f =>
+                            f.type === 'worker' &&
+                            f.faith === this.faith &&
+                            Math.sqrt((f.x - this.x) ** 2 + (f.y - this.y) ** 2) < this.radius + 60
+                        );
+
+                        if (workers.length > 0) {
+                            // Reduced growth rate per user request
+                            this.growth += dt * 0.02 * workers.length;
+                            if (this.growth >= 1.0) {
+                                this.growth = 1.0;
+                                // Visual pop
+                                for (let i = 0; i < 10; i++) game.particles.push(new Particle(this.x, this.y, '#ffd700'));
+                            }
+                        }
+                    }
+
+                    // Check for house spawning (after full growth)
+                    if (this.growth >= 1.0 && !this.hasSpawnedHouse) {
+                        // Spawn ONE house nearby
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = 60;
+                        const hx = this.x + Math.cos(angle) * dist;
+                        const hy = this.y + Math.sin(angle) * dist;
+
+                        game.structures.push(new Structure(hx, hy, 'house', this.faith));
+                        this.hasSpawnedHouse = true;
+                        game.showMessage("A House has been built near your Monument! 🏠");
+                    }
+
+                } else if (this.type !== 'monument') {
+                    // Other structures grow instantly or differently? Let's keep auto for now or instant
+                    if (this.growth < 1.0) this.growth += dt * 0.5;
+                }
+
+                // Spawn followers from houses
+                if (this.type === 'house') {
+                    this.spawnTimer += dt;
+                    if (this.spawnTimer >= 5 && game.followers.length < MAX_FOLLOWERS) {
+                        this.spawnTimer = 0;
+                        const angle = Math.random() * Math.PI * 2;
+                        const follower = new Follower(
+                            this.x + Math.cos(angle) * 40,
+                            this.y + Math.sin(angle) * 40,
+                            this.faith
+                        );
+                        follower.beliefs[this.faith] = 40;
+                        game.followers.push(follower);
+                    }
+                }
+            }
+
+            draw(ctx, camera) {
+                const sx = (this.x - camera.x) * camera.zoom + canvas.width / 2;
+                const sy = (this.y - camera.y) * camera.zoom + canvas.height / 2;
+                let sr = this.radius * camera.zoom;
+
+                // Scale by growth
+                sr *= this.growth;
+
+                if (this.type === 'monument') {
+                    // Glow
+                    const glowSize = 1 + Math.sin(this.glowPhase) * 0.1;
+                    const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr * 2 * glowSize);
+                    gradient.addColorStop(0, this.getColor() + '40');
+                    gradient.addColorStop(1, 'transparent');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, sr * 2 * glowSize, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Monument body
+                    if (this.faith === 'player') {
+                        // White Obelisk with Gold Trim
+                        const w = sr * 0.4;
+                        const h = sr * 1.5 * this.growth; // Grows up
+
+                        // Base
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(sx - w / 2, sy - h, w, h);
+
+                        // Gold Trim
+                        ctx.strokeStyle = '#ffd700';
+                        ctx.lineWidth = 2 * camera.zoom;
+                        ctx.strokeRect(sx - w / 2, sy - h, w, h);
+
+                        // Pyramid Top
+                        ctx.beginPath();
+                        ctx.moveTo(sx - w / 2, sy - h);
+                        ctx.lineTo(sx + w / 2, sy - h);
+                        ctx.lineTo(sx, sy - h - w);
+                        ctx.closePath();
+                        ctx.fillStyle = '#ffd700'; // Gold cap
+                        ctx.fill();
+                        ctx.stroke();
+
+                    } else if (this.faith === 'rival1') {
+                        // Stone Henge
+                        const stoneW = sr * 0.3;
+                        const stoneH = sr * 0.8 * this.growth;
+                        ctx.fillStyle = '#888';
+
+                        // Left Pillar
+                        ctx.fillRect(sx - sr * 0.5, sy - stoneH, stoneW, stoneH);
+                        // Right Pillar
+                        ctx.fillRect(sx + sr * 0.2, sy - stoneH, stoneW, stoneH);
+                        // Lintel (Top)
+                        if (this.growth > 0.8) {
+                            ctx.fillRect(sx - sr * 0.6, sy - stoneH - stoneW * 0.5, sr * 1.2, stoneW * 0.6);
+                        }
+
+                    } else if (this.faith === 'rival2') {
+                        // Dark Tower
+                        const w = sr * 0.5;
+                        const h = sr * 2.0 * this.growth;
+
+                        // Spiky tower
+                        ctx.fillStyle = '#222';
+                        ctx.beginPath();
+                        ctx.moveTo(sx - w / 2, sy);
+                        ctx.lineTo(sx + w / 2, sy);
+                        ctx.lineTo(sx + w / 4, sy - h); // Tapers
+                        ctx.lineTo(sx - w / 4, sy - h);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // Red Eye/Window
+                        if (this.growth > 0.5) {
+                            ctx.fillStyle = '#f00';
+                            ctx.beginPath();
+                            ctx.arc(sx, sy - h * 0.7, sr * 0.15, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+
+                    } else {
+                        // Wooden Totem (Rival 3)
+                        const w = sr * 0.4;
+                        const h = sr * 1.2 * this.growth;
+                        ctx.fillStyle = '#8b4513';
+                        ctx.fillRect(sx - w / 2, sy - h, w, h);
+
+                        // Carvings
+                        ctx.fillStyle = '#5d4037';
+                        if (this.growth > 0.3) ctx.fillRect(sx - w / 3, sy - h * 0.2, w * 0.6, h * 0.1);
+                        if (this.growth > 0.6) ctx.fillRect(sx - w / 3, sy - h * 0.5, w * 0.6, h * 0.1);
+                        if (this.growth > 0.9) ctx.fillRect(sx - w / 3, sy - h * 0.8, w * 0.6, h * 0.1);
+                    }
+                } else if (this.type === 'house') {
+                    // ANCIENT HOUSE (Mud Brick + Straw Roof)
+                    const width = sr * 2.2;
+                    const height = sr * 1.8;
+                    const roofH = sr * 1.2;
+
+                    // Walls (Mud Brick)
+                    ctx.fillStyle = '#C2A383'; // Mud/Clay color
+                    ctx.fillRect(sx - width / 2, sy - height / 2, width, height);
+
+                    // Brick Texture
+                    ctx.fillStyle = '#A88B6D';
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 4; j++) {
+                            if ((i + j) % 2 === 0) continue;
+                            const bx = sx - width / 2 + (j / 4) * width;
+                            const by = sy - height / 2 + (i / 3) * height;
+                            ctx.fillRect(bx + 2, by + 2, (width / 4) - 4, (height / 3) - 4);
+                        }
+                    }
+
+                    // Doorway (Dark opening)
+                    ctx.fillStyle = '#3E2723';
+                    ctx.beginPath();
+                    ctx.arc(sx, sy + height / 2, width * 0.15, Math.PI, 0); // Arched top
+                    ctx.fillRect(sx - width * 0.15, sy + height / 2, width * 0.3, -height * 0.4);
+                    ctx.fill();
+
+                    // Roof (Straw/Thatch) - Triangle with overhang
+                    ctx.fillStyle = '#E6C288'; // Straw color
+                    ctx.beginPath();
+                    ctx.moveTo(sx - width * 0.6, sy - height / 2);
+                    ctx.lineTo(sx + width * 0.6, sy - height / 2);
+                    ctx.lineTo(sx, sy - height / 2 - roofH);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Thatch texture (lines)
+                    ctx.strokeStyle = '#C9A36B';
+                    ctx.lineWidth = 2 * camera.zoom;
+                    ctx.beginPath();
+                    for (let k = 0; k < 6; k++) {
+                        const xOffset = (k / 6) * width;
+                        ctx.moveTo(sx - width * 0.5 + xOffset, sy - height / 2);
+                        ctx.lineTo(sx, sy - height / 2 - roofH);
+                    }
+                    ctx.stroke();
+
+                    // Roof Outline for definition
+                    ctx.strokeStyle = '#8D6E63';
+                    ctx.stroke();
+                } else if (this.type === 'barracks') {
+                    // BARRACKS (GDD §4.1 - spawns at Tech Level 3)
+                    const width = sr * 3;
+                    const height = sr * 2;
+
+                    // Stone base
+                    ctx.fillStyle = '#5d4037';
+                    ctx.fillRect(sx - width / 2, sy - height / 2, width, height);
+
+                    // Battlements
+                    ctx.fillStyle = '#8d6e63';
+                    const bWidth = width / 5;
+                    for (let i = 0; i < 5; i++) {
+                        if (i % 2 === 0) {
+                            ctx.fillRect(sx - width / 2 + i * bWidth, sy - height / 2 - sr * 0.5, bWidth, sr * 0.5);
+                        }
+                    }
+
+                    // Faith Banner
+                    ctx.fillStyle = this.getColor();
+                    ctx.fillRect(sx - sr * 0.2, sy - height / 2 - sr * 1.2, sr * 0.4, sr * 1.5);
+                    ctx.beginPath();
+                    ctx.moveTo(sx + sr * 0.2, sy - height / 2 - sr * 1.2);
+                    ctx.lineTo(sx + sr * 0.8, sy - height / 2 - sr * 0.9);
+                    ctx.lineTo(sx + sr * 0.2, sy - height / 2 - sr * 0.6);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Sword icon
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `${sr * 0.8}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('⚔️', sx, sy);
+                } else if (this.type === 'ruins') {
+                    // RUINS (GDD §4.3 - defeated structures become ruins)
+                    ctx.fillStyle = '#5d4037';
+                    ctx.globalAlpha = 0.6;
+
+                    // Broken walls
+                    ctx.fillRect(sx - sr, sy - sr * 0.3, sr * 0.5, sr * 0.6);
+                    ctx.fillRect(sx + sr * 0.3, sy - sr * 0.2, sr * 0.7, sr * 0.4);
+                    ctx.fillRect(sx - sr * 0.4, sy + sr * 0.1, sr * 0.8, sr * 0.3);
+
+                    ctx.globalAlpha = 1;
+
+                    // Rubble particles
+                    ctx.fillStyle = '#8d6e63';
+                    for (let i = 0; i < 5; i++) {
+                        const rx = sx + (Math.sin(i * 1.5) * sr * 0.8);
+                        const ry = sy + (Math.cos(i * 1.5) * sr * 0.5);
+                        ctx.fillRect(rx, ry, sr * 0.2, sr * 0.2);
+                    }
+                }
+            }
+        }
+
+        class Territory {
+            constructor(x, y, faith) {
+                this.x = x;
+                this.y = y;
+                this.faith = faith;
+                this.radius = 100;
+                this.maxRadius = 400;
+                this.growthRate = 0.5;
+            }
+
+            getColor() {
+                if (this.faith === 'player') return COLORS.player;
+                if (this.faith === 'rival1') return COLORS.rival1;
+                if (this.faith === 'rival2') return COLORS.rival2;
+                return COLORS.rival3;
+            }
+
+            update(dt, game) {
+                // Dynamic Territory Size based on Follower Count
+                // Base size 100, +5 per follower. Cap at 600.
+                const faithFollowers = game.followers.filter(f => f.faith === this.faith).length;
+                const targetRadius = 100 + (faithFollowers * 5);
+                const maxRad = 600;
+
+                // Smooth interpolation to target size
+                const clampedTarget = Math.min(targetRadius, maxRad);
+                this.radius += (clampedTarget - this.radius) * dt * 0.5;
+            }
+
+            draw(ctx, camera) {
+                const sx = (this.x - camera.x) * camera.zoom + canvas.width / 2;
+                const sy = (this.y - camera.y) * camera.zoom + canvas.height / 2;
+                const sr = this.radius * camera.zoom;
+
+                // Territory fill
+                ctx.fillStyle = this.getColor() + '20';
+                ctx.beginPath();
+                ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Border
+                ctx.strokeStyle = this.getColor() + '60';
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.setLineDash([10 * camera.zoom, 5 * camera.zoom]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        class Mountain {
+            constructor(x, y, radius, isHoly = false) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.isHoly = isHoly;
+                this.peakRadius = radius * 0.35;
+                this.trees = [];
+                this.points = [];
+
+                // Generate irregular shape points
+                const segments = 12;
+                for (let i = 0; i < segments; i++) {
+                    const theta = (i / segments) * Math.PI * 2;
+                    // Vary radius slightly for "rocky" look
+                    const r = radius * (0.85 + Math.random() * 0.3);
+                    this.points.push({
+                        x: Math.cos(theta) * r,
+                        y: Math.sin(theta) * r
+                    });
+                }
+
+                // Generate ridges (lines from near center to edge)
+                this.ridges = [];
+                for (let i = 0; i < 5; i++) {
+                    const theta = Math.random() * Math.PI * 2;
+                    this.ridges.push({
+                        angle: theta,
+                        length: radius * (0.4 + Math.random() * 0.4)
+                    })
+                }
+
+                // Generate static peak points
+                this.peakPoints = [];
+                const peakRad = this.peakRadius;
+                for (let i = 0; i < 8; i++) {
+                    const theta = (i / 8) * Math.PI * 2;
+                    const r = peakRad * (0.8 + Math.random() * 0.4);
+                    this.peakPoints.push({
+                        x: Math.cos(theta) * r,
+                        y: Math.sin(theta) * r
+                    });
+                }
+
+                // Generate trees on lower slopes
+                const treeCount = Math.floor(radius / 12);
+                for (let i = 0; i < treeCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = radius * 0.5 + Math.random() * radius * 0.4;
+                    this.trees.push({
+                        x: Math.cos(angle) * dist,
+                        y: Math.sin(angle) * dist,
+                        size: 8 + Math.random() * 6,
+                        color: COLORS.tree
+                    });
+                }
+            }
+
+            draw(ctx, camera, isGuarded, game) {
+                const sx = (this.x - camera.x) * camera.zoom + canvas.width / 2;
+                const sy = (this.y - camera.y) * camera.zoom + canvas.height / 2;
+                const sr = this.radius * camera.zoom;
+
+                // Draw Mountain Base
+                ctx.fillStyle = '#795548';
+                ctx.beginPath();
+                if (this.points.length > 0) {
+                    const p0 = this.points[0];
+                    ctx.moveTo(sx + p0.x * camera.zoom, sy + p0.y * camera.zoom);
+                    for (let i = 1; i < this.points.length; i++) {
+                        const p = this.points[i];
+                        ctx.lineTo(sx + p.x * camera.zoom, sy + p.y * camera.zoom);
+                    }
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw Peak
+                ctx.fillStyle = '#D7CCC8';
+                ctx.beginPath();
+                if (this.peakPoints.length > 0) {
+                    const p0 = this.peakPoints[0];
+                    ctx.moveTo(sx + p0.x * camera.zoom, sy + p0.y * camera.zoom - sr * 0.5); // Offset up
+                    for (let i = 1; i < this.peakPoints.length; i++) {
+                        const p = this.peakPoints[i];
+                        ctx.lineTo(sx + p.x * camera.zoom, sy + p.y * camera.zoom - sr * 0.5);
+                    }
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Holy Ledge
+                if (this.isHoly) {
+                    const lx = sx;
+                    const ly = sy + sr * 0.2;
+                    const lr = sr * 0.4;
+
+                    // Ledge platform (White stone)
+                    ctx.fillStyle = '#eee';
+                    ctx.beginPath();
+                    ctx.ellipse(lx, ly, lr, lr * 0.6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Border
+                    ctx.strokeStyle = '#ccc';
+                    ctx.lineWidth = 2 * camera.zoom;
+                    ctx.stroke();
+
+                    // Sermon Range Highlight - Show when player is near Holy Mountain
+                    if (game && game.getPlayer) {
+                        const player = game.getPlayer();
+                        if (player) {
+                            const playerDist = Math.sqrt((player.x - this.x) ** 2 + (player.y - this.y) ** 2);
+                            const SERMON_RANGE = 200; // Effect radius
+                            // Show when player is within the mountain's sphere of influence
+                            if (playerDist < this.radius + 100) {
+                                const time = Date.now() / 1000;
+                                const pulse = 0.5 + Math.sin(time * 2) * 0.3;
+
+                                // Draw range circle
+                                ctx.save();
+                                ctx.strokeStyle = player.sermonCooldown > 0 ? 'rgba(255, 100, 100, 0.4)' : `rgba(255, 215, 0, ${0.3 + pulse * 0.3})`;
+                                ctx.lineWidth = 3 * camera.zoom;
+                                ctx.setLineDash([10 * camera.zoom, 5 * camera.zoom]);
+                                ctx.beginPath();
+                                ctx.arc(sx, sy, SERMON_RANGE * camera.zoom, 0, Math.PI * 2);
+                                ctx.stroke();
+
+                                // Filled area (subtle)
+                                ctx.fillStyle = player.sermonCooldown > 0 ? 'rgba(255, 100, 100, 0.05)' : `rgba(255, 215, 0, ${0.05 + pulse * 0.05})`;
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                        }
+                    }
+
+                    // New Stylized Symbols (Replacement for emojis)
+                    ctx.save();
+                    const iconSize = lr * 0.3;
+                    const spacing = lr * 0.5;
+
+                    // Left Symbol: Crescent Moon
+                    ctx.fillStyle = '#90caf9';
+                    ctx.beginPath();
+                    ctx.arc(lx - spacing, ly, iconSize, 0.2 * Math.PI, 1.8 * Math.PI);
+                    ctx.arc(lx - spacing + iconSize * 0.4, ly, iconSize * 0.8, 1.6 * Math.PI, 0.4 * Math.PI, true);
+                    ctx.fill();
+
+                    // Center Symbol: Radiant Sun
+                    ctx.fillStyle = '#ffd600';
+                    ctx.beginPath();
+                    ctx.arc(lx, ly, iconSize * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Rays
+                    ctx.strokeStyle = '#ffd600';
+                    ctx.lineWidth = 2 * camera.zoom;
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        ctx.beginPath();
+                        ctx.moveTo(lx + Math.cos(angle) * iconSize * 0.9, ly + Math.sin(angle) * iconSize * 0.9);
+                        ctx.lineTo(lx + Math.cos(angle) * iconSize * 1.3, ly + Math.sin(angle) * iconSize * 1.3);
+                        ctx.stroke();
+                    }
+
+                    // Right Symbol: Holy Star
+                    ctx.fillStyle = '#ce93d8';
+                    ctx.beginPath();
+                    ctx.moveTo(lx + spacing, ly - iconSize);
+                    ctx.lineTo(lx + spacing + iconSize * 0.6, ly);
+                    ctx.lineTo(lx + spacing, ly + iconSize);
+                    ctx.lineTo(lx + spacing - iconSize * 0.6, ly);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Guard
+                    if (isGuarded) {
+                        const gx = lx;
+                        const gy = ly;
+                        const gr = 10 * camera.zoom;
+
+                        // Guard Body (Red Hardliner)
+                        ctx.fillStyle = '#d32f2f';
+                        ctx.beginPath();
+                        ctx.arc(gx, gy, gr, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Guard Icon (Shield)
+                        ctx.font = `${gr}px Arial`;
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#fff';
+                        ctx.fillText("🛡️", gx, gy);
+                    }
+
+                    // Sermon Visualization - Show when player is preaching on ledge
+                    if (game && game.getPlayer && game.getPlayer()) {
+                        const player = game.getPlayer();
+                        if (player.isPreaching && player.onLedge) {
+                            const time = Date.now() / 500;
+
+                            // Radiant glow behind prophet
+                            const glowGradient = ctx.createRadialGradient(lx, ly - lr * 0.3, 0, lx, ly - lr * 0.3, lr * 1.5);
+                            glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+                            glowGradient.addColorStop(0.5, 'rgba(255, 215, 0, 0.2)');
+                            glowGradient.addColorStop(1, 'transparent');
+                            ctx.fillStyle = glowGradient;
+                            ctx.beginPath();
+                            ctx.arc(lx, ly - lr * 0.3, lr * 1.5, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            // Radiating light rays
+                            ctx.save();
+                            ctx.strokeStyle = 'rgba(255, 223, 0, 0.4)';
+                            ctx.lineWidth = 2 * camera.zoom;
+                            for (let i = 0; i < 8; i++) {
+                                const angle = time + (i / 8) * Math.PI * 2;
+                                const innerR = lr * 0.5;
+                                const outerR = lr * 1.2 + Math.sin(time * 2 + i) * lr * 0.2;
+                                ctx.beginPath();
+                                ctx.moveTo(lx + Math.cos(angle) * innerR, ly - lr * 0.3 + Math.sin(angle) * innerR);
+                                ctx.lineTo(lx + Math.cos(angle) * outerR, ly - lr * 0.3 + Math.sin(angle) * outerR);
+                                ctx.stroke();
+                            }
+                            ctx.restore();
+
+                            // "Preaching" text indicator
+                            ctx.fillStyle = 'rgba(255, 223, 0, 0.9)';
+                            ctx.font = `bold ${12 * camera.zoom}px sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.fillText('📖 PREACHING', lx, ly - lr * 1.3);
+                        }
+                    }
+                }
+
+                // Trees
+                for (const t of this.trees) {
+                    const tx = sx + t.x * camera.zoom;
+                    const ty = sy + t.y * camera.zoom;
+                    const tsz = t.size * camera.zoom;
+
+                    // Trunk
+                    ctx.fillStyle = '#3e2723';
+                    ctx.fillRect(tx - tsz * 0.2, ty, tsz * 0.4, tsz * 0.6);
+
+                    // Leaf Triangle
+                    ctx.fillStyle = t.color;
+                    ctx.beginPath();
+                    ctx.moveTo(tx - tsz, ty);
+                    ctx.lineTo(tx + tsz, ty);
+                    ctx.lineTo(tx, ty - tsz * 2);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+        }
+
+        // ============================================
+        // Main Game Class
+        // ============================================
+
+        class Game {
+            constructor() {
+                this.prophets = [];
+                this.followers = [];
+                this.structures = [];
+                this.territories = [];
+                this.mountains = [];
+                this.beaches = [];
+                this.landRadius = WORLD_SIZE * 0.35;
+                this.lakeRadius = WORLD_SIZE * 0.08;
+                this.lakeX = WORLD_SIZE / 2 + randRange(-200, 200);
+                this.lakeY = WORLD_SIZE / 2 + randRange(-200, 200);
+
+                this.camera = {
+                    x: WORLD_SIZE / 2,
+                    y: WORLD_SIZE / 2,
+                    zoom: 1,
+                    targetZoom: 1
+                };
+
+                this.keys = {};
+                this.placingTerritory = false;
+                this.lastTime = 0;
+                this.particles = [];
+                this.speechBubbles = [];
+                this.mouseX = 0;
+                this.mouseY = 0;
+
+                this.init();
+            }
+
+            init() {
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                window.addEventListener('keydown', e => {
+                    this.keys[e.key.toLowerCase()] = true;
+                    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) {
+                        e.preventDefault();
+                    }
+                });
+                window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
+                window.addEventListener('wheel', e => {
+                    this.camera.targetZoom = clamp(this.camera.targetZoom - e.deltaY * 0.001, 0.3, 2);
+                });
+                canvas.addEventListener('mousemove', e => {
+                    const rect = canvas.getBoundingClientRect();
+                    this.mouseX = e.clientX - rect.left;
+                    this.mouseY = e.clientY - rect.top;
+                });
+                canvas.addEventListener('click', e => this.onClick(e));
+
+                this.generateWorld();
+                this.spawnEntities();
+
+                requestAnimationFrame(t => this.loop(t));
+            }
+
+            resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+
+            generateWorld() {
+                // Generate Pangea Landmass
+                this.landPolygon = [];
+                const points = 120;
+                const baseRadius = WORLD_SIZE * 0.38;
+                const noiseScale = 0.1;
+                const center = WORLD_SIZE / 2;
+
+                // Simple pseudo-random noise for shape
+                const noise = (x) => Math.sin(x) * 0.5 + Math.sin(x * 2.3) * 0.25 + Math.sin(x * 5.7) * 0.125;
+
+                for (let i = 0; i < points; i++) {
+                    const angle = (i / points) * Math.PI * 2;
+                    // Vary radius with noise to create Pangea-like irregular shape
+                    // Use low frequency noise for big continents, high freq for details
+                    const r = baseRadius +
+                        noise(angle * 3) * 150 +  // Large lobes
+                        noise(angle * 10) * 40;   // Coasts
+
+                    this.landPolygon.push({
+                        x: center + Math.cos(angle) * r,
+                        y: center + Math.sin(angle) * r
+                    });
+                }
+
+                // Generate Organic Lake
+                this.lakePolygon = [];
+                const lakePoints = 40;
+                const lakeBaseRadius = WORLD_SIZE * 0.09;
+
+                for (let i = 0; i < lakePoints; i++) {
+                    const angle = (i / lakePoints) * Math.PI * 2;
+                    const r = lakeBaseRadius + noise(angle * 5 + 100) * 40; // Offset seed
+                    this.lakePolygon.push({
+                        x: this.lakeX + Math.cos(angle) * r,
+                        y: this.lakeY + Math.sin(angle) * r
+                    });
+                }
+
+                // Calculate max lake radius for collision optimization
+                this.lakeRadius = lakeBaseRadius + 40;
+
+                // Generate mountains (avoid lake and ocean)
+                const mountainsData = [];
+                const mountainCount = 8;
+                for (let i = 0; i < mountainCount; i++) {
+                    let attempts = 0;
+                    while (attempts < 50) {
+                        const angle = Math.random() * Math.PI * 2;
+                        // Keep within landmass but away from center
+                        const dist = 300 + Math.random() * (this.landRadius - 400);
+                        const x = center + Math.cos(angle) * dist;
+                        const y = center + Math.sin(angle) * dist;
+                        const radius = 60 + Math.random() * 80;
+
+                        // Check overlap with existing
+                        let valid = true;
+                        for (const m of mountainsData) {
+                            if (distBetween({ x, y }, m) < radius + m.radius + 30) valid = false;
+                        }
+
+                        // Check lake overlap
+                        if (distBetween({ x, y }, { x: this.lakeX, y: this.lakeY }) < radius + this.lakeRadius + 50) valid = false;
+
+                        // Check land
+                        if (!isPointInPoly({ x, y }, this.landPolygon)) valid = false;
+
+                        if (valid) {
+                            mountainsData.push({ x, y, radius });
+                            break;
+                        }
+                        attempts++;
+                    }
+                }
+
+                // Sort by radius descending to find the "Holy Mountain" (biggest)
+                mountainsData.sort((a, b) => b.radius - a.radius);
+
+                // Create objects
+                for (let i = 0; i < mountainsData.length; i++) {
+                    const m = mountainsData[i];
+                    this.mountains.push(new Mountain(m.x, m.y, m.radius, i === 0)); // First is Holy
+                }
+
+                // Generate Trees (Phase 4 preview - placing them now)
+                this.trees = [];
+                for (let i = 0; i < 300; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = Math.random() * baseRadius * 1.2;
+                    const x = center + Math.cos(angle) * dist;
+                    const y = center + Math.sin(angle) * dist;
+
+                    // Must be on land, not in lake, not in mountain
+                    if (isPointInPoly({ x, y }, this.landPolygon) &&
+                        !isPointInPoly({ x, y }, this.lakePolygon)) {
+
+                        let clear = true;
+                        for (const m of this.mountains) {
+                            if (distBetween({ x, y }, m) < m.radius + 20) clear = false;
+                        }
+
+                        if (clear) {
+                            this.trees.push({
+                                x: x,
+                                y: y,
+                                type: Math.random() > 0.3 ? 'evergreen' : 'deciduous',
+                                size: 0.8 + Math.random() * 0.4
+                            });
+                        }
+                    }
+                }
+
+                // Generate River (GDD §6 - updated logic: Always flow to sea, sometimes start from mountain)
+                this.rivers = [];
+                // 30% chance to start from a mountain, else from lake
+                const startFromMountain = Math.random() < 0.3;
+                let riverStartX, riverStartY;
+
+                if (startFromMountain && this.mountains.length > 1) {
+                    // Pick a random mountain (skip first which is holy mountain)
+                    const m = this.mountains[1 + Math.floor(Math.random() * (this.mountains.length - 1))];
+                    riverStartX = m.x;
+                    riverStartY = m.y;
+                } else {
+                    // Start from lake edge
+                    const riverStartAngle = Math.random() * Math.PI * 2;
+                    riverStartX = this.lakeX + Math.cos(riverStartAngle) * this.lakeRadius;
+                    riverStartY = this.lakeY + Math.sin(riverStartAngle) * this.lakeRadius;
+                }
+
+                // Generate flow points
+                const riverPoints = [{ x: riverStartX, y: riverStartY }];
+                let rx = riverStartX;
+                let ry = riverStartY;
+
+                // Determine general direction outwards from center
+                const startAngle = Math.atan2(ry - center, rx - center);
+                let flowAngle = startAngle;
+
+                let attempts = 0;
+                let reachedSea = false;
+
+                // Keep generating untill we hit sea (or too many points)
+                while (!reachedSea && attempts < 100) {
+                    // Meander slightly
+                    flowAngle += (Math.random() - 0.5) * 1.0;
+                    // Push outwards generally
+                    const step = 20;
+                    rx += Math.cos(flowAngle) * step;
+                    ry += Math.sin(flowAngle) * step;
+
+                    riverPoints.push({ x: rx, y: ry });
+
+                    // Check if outside land polygon
+                    if (!isPointInPoly({ x: rx, y: ry }, this.landPolygon) && dist({ x: rx, y: ry }, { x: center, y: center }) > this.landRadius * 0.8) {
+                        reachedSea = true;
+                    }
+                    attempts++;
+                }
+
+                this.rivers.push({
+                    points: riverPoints,
+                    width: 8 + Math.random() * 6
+                });
+            }
+
+            getValidSpawnPosition(minDist, maxDist, padding = 30) {
+                let attempts = 0;
+                // Increase attempts for robustness
+                while (attempts < 200) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = randRange(minDist, maxDist);
+                    const x = WORLD_SIZE / 2 + Math.cos(angle) * dist;
+                    const y = WORLD_SIZE / 2 + Math.sin(angle) * dist;
+
+                    // Check if on land
+                    if (this.getTerrainAt(x, y) !== 'land') {
+                        attempts++;
+                        continue;
+                    }
+
+                    // Extra strict Lake check
+                    if (Math.sqrt((x - this.lakeX) ** 2 + (y - this.lakeY) ** 2) < this.lakeRadius + 50) {
+                        attempts++;
+                        continue;
+                    }
+
+                    // Check mountain collision
+                    let hitMountain = false;
+                    for (const m of this.mountains) {
+                        if (Math.sqrt((x - m.x) ** 2 + (y - m.y) ** 2) < m.radius + padding) {
+                            hitMountain = true;
+                            break;
+                        }
+                    }
+                    if (hitMountain) {
+                        attempts++;
+                        continue;
+                    }
+
+                    return { x, y };
+                }
+                // Fallback: guaranteed safe spot (spiral out from safe radius)
+                for (let i = 0; i < 20; i++) {
+                    const angle = (i / 20) * Math.PI * 2;
+                    const r = this.landRadius * 0.6;
+                    const fx = WORLD_SIZE / 2 + Math.cos(angle) * r;
+                    const fy = WORLD_SIZE / 2 + Math.sin(angle) * r;
+                    if (this.getTerrainAt(fx, fy) === 'land' && Math.sqrt((fx - this.lakeX) ** 2 + (fy - this.lakeY) ** 2) > this.lakeRadius + 50) {
+                        return { x: fx, y: fy };
+                    }
+                }
+                return { x: WORLD_SIZE / 2 + 350, y: WORLD_SIZE / 2 }; // Absolute worst case
+            }
+
+            spawnEntities() {
+                // Player prophet - Safe distance from center to avoid potential center-lake
+                const pPos = this.getValidSpawnPosition(250, 500);
+                const player = new Prophet(pPos.x, pPos.y, 'player', true);
+                this.prophets.push(player);
+
+                // AI prophets
+                const rivalFaiths = ['rival1', 'rival2'];
+                for (const faith of rivalFaiths) {
+                    let pos;
+                    let farEnough = false;
+                    let attempts = 0;
+
+                    // Try to find a spot far from other prophets
+                    while (!farEnough && attempts < 20) {
+                        pos = this.getValidSpawnPosition(300, 600);
+                        farEnough = true;
+                        for (const p of this.prophets) {
+                            if (dist(pos, p) < 400) {
+                                farEnough = false;
+                                break;
+                            }
+                        }
+                        attempts++;
+                    }
+                    // Use safe fallback if loop fails
+                    if (!pos) pos = this.getValidSpawnPosition(300, 600);
+
+                    this.prophets.push(new Prophet(pos.x, pos.y, faith, false));
+                }
+
+                // Open-minded followers
+                for (let i = 0; i < 80; i++) {
+                    const pos = this.getValidSpawnPosition(150, this.landRadius - 80, 10);
+                    this.followers.push(new Follower(pos.x, pos.y, 'open'));
+                }
+
+                // Spawn houses (ancient sheds)
+                for (let i = 0; i < 6; i++) {
+                    const pos = this.getValidSpawnPosition(200, this.landRadius - 150, 40);
+                    this.structures.push(new Structure(pos.x, pos.y, 'house', 'open'));
+                }
+
+                // Spawn Nairb - the dummy prophet who runs from his followers
+                let nairbPos = null;
+                let nairbFarEnough = false;
+                let nairbAttempts = 0;
+                while (!nairbFarEnough && nairbAttempts < 20) {
+                    nairbPos = this.getValidSpawnPosition(400, 700);
+                    nairbFarEnough = true;
+                    for (const p of this.prophets) {
+                        if (dist(nairbPos, p) < 350) {
+                            nairbFarEnough = false;
+                            break;
+                        }
+                    }
+                    nairbAttempts++;
+                }
+                if (!nairbPos) nairbPos = this.getValidSpawnPosition(400, 700);
+
+                const nairb = new Prophet(nairbPos.x, nairbPos.y, 'nairb', false);
+                nairb.isNairb = true;
+                nairb.name = 'Nairb';
+                this.prophets.push(nairb);
+
+                // Spawn sandal followers for Nairb (they worship his sandal)
+                for (let i = 0; i < 3; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const sandalDist = 30 + Math.random() * 80;
+                    const f = new Follower(
+                        nairbPos.x + Math.cos(angle) * sandalDist,
+                        nairbPos.y + Math.sin(angle) * sandalDist,
+                        'nairb'
+                    );
+                    f.type = 'sandal';
+                    f.beliefs.nairb = 100; // Totally devoted
+                    f.sayTimer = randRange(5, 15); // Staggered speech timing
+                    this.followers.push(f);
+                }
+            }
+
+            getTerrainAt(x, y) {
+                // Check bounds first (optimization)
+                if (x < 50 || x > WORLD_SIZE - 50 || y < 50 || y > WORLD_SIZE - 50) return 'water';
+
+                // Check Lake Polygon
+                if (this.lakePolygon && isPointInPoly({ x, y }, this.lakePolygon)) {
+                    return 'water';
+                }
+
+                // Check Mountains
+                for (const m of this.mountains) {
+                    const d = Math.sqrt((x - m.x) ** 2 + (y - m.y) ** 2);
+                    if (d < m.radius) return 'mountain';
+                }
+
+                // Check Land Polygon
+                if (this.landPolygon && isPointInPoly({ x, y }, this.landPolygon)) {
+                    return 'land';
+                }
+
+                return 'water'; // Ocean
+            }
+
+            getPlayer() {
+                return this.prophets.find(p => p.isPlayer);
+            }
+
+            update(dt) {
+                // Update Camera
+                const lerpSpeed = 5 * dt;
+                this.camera.zoom += (this.camera.targetZoom - this.camera.zoom) * lerpSpeed;
+
+                const player = this.getPlayer();
+                if (player) {
+                    this.camera.x += (player.x - this.camera.x) * lerpSpeed;
+                    this.camera.y += (player.y - this.camera.y) * lerpSpeed;
+                }
+
+
+
+                this.updateUI();
+
+                // WIN CONDITION CHECK (Every 2 seconds approx)
+                if (Math.random() < 0.01 && !this.gameOver) {
+                    const player = this.getPlayer();
+                    if (player) {
+                        // Condition 1: 150 Followers
+                        const playerFollowers = this.followers.filter(f => f.faith === 'player').length;
+                        if (playerFollowers >= 150) {
+                            this.gameOver = true;
+                            this.showMessage("🏆 VICTORY! You have gathered a massive following!");
+                            alert("VICTORY! You have reached 150 followers!");
+                        }
+
+                        // Condition 2: 90% Territory
+                        // Sum area of player territories
+                        const playerTerritories = this.territories.filter(t => t.faith === 'player');
+                        let playerArea = 0;
+                        for (const t of playerTerritories) {
+                            playerArea += Math.PI * (t.radius ** 2);
+                        }
+
+                        // Approx Land Area
+                        const landArea = Math.PI * (this.landRadius ** 2);
+                        if (playerArea > landArea * 0.9) {
+                            this.gameOver = true;
+                            this.showMessage("🏆 VICTORY! Your territory dominates the land!");
+                            alert("VICTORY! Your territory covers over 90% of the known world!");
+                        }
+                    }
+                }
+
+                // Sort entities by Y for pseudo-3D
+                this.structures.sort((a, b) => a.y - b.y);
+                this.followers.sort((a, b) => a.y - b.y);
+                this.prophets.sort((a, b) => a.y - b.y);
+
+                // Update Mountains (for effects/ledges in future)
+                // for (const m of this.mountains) m.update(dt); // Not needed yet
+
+                // Update Territories
+                for (let i = this.territories.length - 1; i >= 0; i--) {
+                    this.territories[i].update(dt, this);
+                }
+
+                // Update Structures
+                for (let i = this.structures.length - 1; i >= 0; i--) {
+                    const s = this.structures[i];
+                    s.update(dt, this);
+                }
+
+                // Update Followers
+                for (let i = this.followers.length - 1; i >= 0; i--) {
+                    const f = this.followers[i];
+                    f.update(dt, this);
+                }
+
+                // Follower Collision System (prevents stacking)
+                for (let i = 0; i < this.followers.length; i++) {
+                    for (let j = i + 1; j < this.followers.length; j++) {
+                        const a = this.followers[i];
+                        const b = this.followers[j];
+                        const d = dist(a, b);
+                        const minDist = a.radius + b.radius;
+                        if (d < minDist && d > 0) {
+                            const angle = Math.atan2(b.y - a.y, b.x - a.x);
+                            const push = (minDist - d) * 0.5;
+                            a.x -= Math.cos(angle) * push;
+                            a.y -= Math.sin(angle) * push;
+                            b.x += Math.cos(angle) * push;
+                            b.y += Math.sin(angle) * push;
+                        }
+                    }
+                }
+
+                // Follower-Prophet Collision (prevent followers stacking on prophets)
+                for (const f of this.followers) {
+                    for (const p of this.prophets) {
+                        const d = dist(f, p);
+                        const minDist = f.radius + p.radius;
+                        if (d < minDist && d > 0) {
+                            const angle = Math.atan2(f.y - p.y, f.x - p.x);
+                            const push = (minDist - d);
+                            f.x += Math.cos(angle) * push;
+                            f.y += Math.sin(angle) * push;
+                        }
+                    }
+                }
+
+                // Update Particles
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    this.particles[i].update(dt);
+                    if (this.particles[i].life <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+
+                // Update Speech Bubbles
+                for (let i = this.speechBubbles.length - 1; i >= 0; i--) {
+                    this.speechBubbles[i].update(dt);
+                    if (this.speechBubbles[i].life <= 0) {
+                        this.speechBubbles.splice(i, 1);
+                    }
+                }
+
+                // Update Prophets
+                for (const p of this.prophets) {
+                    p.update(dt, this);
+                }
+
+                // Prophet collisions
+                for (let i = 0; i < this.prophets.length; i++) {
+                    for (let j = i + 1; j < this.prophets.length; j++) {
+                        const a = this.prophets[i];
+                        const b = this.prophets[j];
+                        const dist = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+
+                        if (dist < a.radius + b.radius) {
+                            // If either is converted, just bump, no fight
+                            if (a.isConverted || b.isConverted) {
+                                const angle = Math.atan2(b.y - a.y, b.x - a.x);
+                                a.vx -= Math.cos(angle) * 5;
+                                a.vy -= Math.sin(angle) * 5;
+                                b.vx += Math.cos(angle) * 5;
+                                b.vy += Math.sin(angle) * 5;
+                                continue;
+                            }
+
+                            // Fight logic
+                            const winner = a.influence > b.influence ? a : b;
+                            const loser = winner === a ? b : a;
+
+                            // Bump loser away
+                            const angle = Math.atan2(loser.y - winner.y, loser.x - winner.x);
+                            loser.vx += Math.cos(angle) * 8;
+                            loser.vy += Math.sin(angle) * 8;
+                            loser.hp -= 1;
+
+                            // Check for prophet death (HP <= 0)
+                            if (loser.hp <= 0 && !loser.isPlayer) {
+                                // Convert losing prophet to winner's faith!
+                                const oldFaith = loser.faith;
+                                loser.faith = winner.isPlayer ? 'player' : winner.faith;
+                                loser.hp = loser.maxHp; // Restore HP
+                                loser.influence = Math.floor(loser.influence * 0.5); // Lose half influence
+
+                                // SPECIAL: Nairb conversion reward - player gains 10 sandal followers!
+                                if (loser.isNairb && winner.isPlayer) {
+                                    // Convert existing sandal followers to player (keep sandal type)
+                                    const nairbFollowers = this.followers.filter(f => f.faith === 'nairb');
+                                    for (const f of nairbFollowers) {
+                                        f.faith = 'player';
+                                        // Keep sandal type! They still worship the sandal
+                                    }
+
+                                    // Spawn 10 additional sandal followers for player
+                                    for (let i = 0; i < 10; i++) {
+                                        const angle = Math.random() * Math.PI * 2;
+                                        const d = 40 + Math.random() * 60;
+                                        const f = new Follower(
+                                            winner.x + Math.cos(angle) * d,
+                                            winner.y + Math.sin(angle) * d,
+                                            'player'
+                                        );
+                                        f.type = 'sandal'; // Sandal followers!
+                                        f.beliefs.player = 80;
+                                        f.sayTimer = randRange(5, 15);
+                                        this.followers.push(f);
+                                        // Particles
+                                        for (let p = 0; p < 3; p++) {
+                                            this.particles.push(new Particle(f.x, f.y, '#c9a86c'));
+                                        }
+                                    }
+                                    this.showMessage("🩴 Nairb converted! You gained 10 sandal followers!");
+                                    loser.isConverted = true;
+                                    loser.isNairb = false; // No longer Nairb behavior
+                                    loser.radius = loser.baseRadius * 0.7;
+                                    loser.territory = winner.territory;
+                                    continue; // Skip normal war mechanic
+                                }
+
+                                // WAR MECHANIC: If player defeats rival, followers become hostile warriors
+                                const loserFollowers = this.followers.filter(f => f.faith === oldFaith);
+                                if (winner.isPlayer) {
+                                    // SPAWN BARRACKS next to player monument (GDD §4.1)
+                                    const playerMonument = this.structures.find(s => s.type === 'monument' && s.faith === 'player');
+                                    if (playerMonument) {
+                                        const barracksAngle = Math.random() * Math.PI * 2;
+                                        const barracksX = playerMonument.x + Math.cos(barracksAngle) * 80;
+                                        const barracksY = playerMonument.y + Math.sin(barracksAngle) * 80;
+                                        this.structures.push(new Structure(barracksX, barracksY, 'barracks', 'player'));
+                                        this.showMessage("🏰 Barracks built! Your followers prepare for war!");
+                                    }
+
+                                    // Some player followers become DEFENDERS (GDD §4.2)
+                                    const playerFollowers = this.followers.filter(f => f.faith === 'player' && f.type === 'regular');
+                                    const defenderCount = Math.min(5, Math.floor(playerFollowers.length * 0.3));
+                                    for (let d = 0; d < defenderCount; d++) {
+                                        if (playerFollowers[d]) {
+                                            playerFollowers[d].type = 'defender';
+                                            playerFollowers[d].hp = 5;
+                                            playerFollowers[d].attackPower = 2;
+                                        }
+                                    }
+
+                                    // Enemy followers become warriors attacking player
+                                    for (const f of loserFollowers) {
+                                        f.type = 'warrior';
+                                        f.hp = 10; // Warriors are tougher
+                                        f.attackPower = 5;
+                                        f.attackTarget = 'player'; // Target player followers
+                                        // Visual Feedback
+                                        f.speechText = "⚔️";
+                                        f.speechTimer = 2;
+                                        // Particles
+                                        for (let part = 0; part < 5; part++) {
+                                            this.particles.push(new Particle(f.x, f.y, '#ff4444'));
+                                        }
+                                    }
+                                    this.showMessage(`⚔️ WAR! ${oldFaith} followers take up arms!`);
+                                } else {
+                                    // Non-player winner: peaceful conversion as before
+                                    for (const f of loserFollowers) {
+                                        f.faith = winner.faith;
+                                        f.beliefs[f.faith] = 40;
+                                        f.speechText = "🛐";
+                                        f.speechTimer = 2;
+                                    }
+                                }
+
+                                // Transfer territory ownership
+                                for (const t of this.territories) {
+                                    if (t.faith === oldFaith) {
+                                        t.faith = winner.isPlayer ? 'player' : winner.faith;
+                                    }
+                                }
+                                for (const s of this.structures) {
+                                    if (s.faith === oldFaith) {
+                                        s.faith = winner.isPlayer ? 'player' : winner.faith;
+                                    }
+                                }
+
+                                this.showMessage(`⚔️ ${oldFaith} Prophet converted to ${loser.faith}!`);
+
+                                // Mark as converted and shrink
+                                loser.isConverted = true;
+                                loser.radius = loser.baseRadius * 0.7; // Shrink to 70% size
+
+                                // Assign winner's territory to converted prophet
+                                loser.territory = winner.territory;
+                            } else {
+                                // Winner gains 10% of loser's followers (if not death)
+                                const loserFollowers = this.followers.filter(f => f.faith === loser.faith || (loser.isPlayer && f.faith === 'player'));
+                                if (loserFollowers.length > 0) {
+                                    const convertCount = Math.ceil(loserFollowers.length * 0.1);
+                                    for (let k = 0; k < convertCount; k++) {
+                                        const f = loserFollowers[k];
+                                        f.faith = winner.isPlayer ? 'player' : winner.faith;
+                                        f.beliefs[winner.isPlayer ? 'player' : winner.faith] = 50;
+
+                                        // Visual Feedback
+                                        f.speechText = (f.faith === 'player') ? "✝️" : "🛐";
+                                        f.speechTimer = 2;
+
+                                        // Simple visual effect
+                                        for (let part = 0; part < 5; part++) {
+                                            game.particles.push(new Particle(f.x, f.y, '#ffd700'));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            updateUI() {
+                // Update HUD
+                const player = this.getPlayer();
+                if (player) {
+                    document.getElementById('health').textContent = Math.ceil(player.hp);
+                    document.getElementById('gold').textContent = Math.floor(player.gold);
+                    document.getElementById('followers').textContent = this.followers.filter(f => f.faith === 'player').length;
+                    document.getElementById('influence').textContent = Math.floor(player.influence);
+
+                    // Fix ethics bar - update marker position
+                    const ethicsVal = player.ethics || 0;
+                    const marker = document.getElementById('ethics-marker');
+                    if (marker) {
+                        // Ethics range: -100 to +100, map to 0% - 100%
+                        const percent = Math.max(0, Math.min(100, ((ethicsVal + 100) / 200) * 100));
+                        marker.style.left = percent + '%';
+                        // Update marker color based on ethics
+                        if (ethicsVal > 20) marker.style.background = '#4f4'; // Good - green
+                        else if (ethicsVal < -20) marker.style.background = '#f44'; // Evil - red
+                        else marker.style.background = '#f0f'; // Neutral - magenta
+                    }
+                }
+
+                // Button states
+                const territoryBtn = document.getElementById('miracleTerritory');
+                const pFollowers = this.followers.filter(f => f.faith === 'player').length;
+                const hasTerritory = this.territories.some(t => t.faith === 'player');
+
+                if (territoryBtn) {
+                    if (hasTerritory) {
+                        territoryBtn.disabled = true;
+                        territoryBtn.innerText = "Territory Established";
+                    } else {
+                        territoryBtn.disabled = pFollowers < 10;
+                        territoryBtn.innerText = "Build Territory (10 Followers)";
+                    }
+                }
+            }
+
+            useMiracle(type, event) {
+                if (event) event.stopPropagation();
+                const player = this.getPlayer();
+                if (!player) return;
+
+                if (type === 'convert') {
+                    if (player.influence >= 700) {
+                        player.influence -= 700;
+
+                        // Visual: Prophet shoots up, blue→red fluids (GDD §3.1)
+                        player.miracleAnimTimer = 2; // 2 second animation
+                        for (let i = 0; i < 30; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = 2 + Math.random() * 3;
+                            const p = new Particle(player.x, player.y, i < 15 ? '#4fc3f7' : '#ff5722');
+                            p.vx = Math.cos(angle) * speed;
+                            p.vy = Math.sin(angle) * speed - 5; // Shoot upward
+                            this.particles.push(p);
+                        }
+
+                        // Convert all nearby (skip greedy and hardliners per GDD)
+                        for (const follower of this.followers) {
+                            if (dist(player, follower) < 150 &&
+                                follower.type !== 'greedy' &&
+                                follower.type !== 'hardliner') {
+                                follower.faith = 'player';
+                                follower.beliefs.player = 50;
+                                // Conversion particles
+                                this.particles.push(new Particle(follower.x, follower.y, '#ffd700'));
+                            }
+                        }
+                        this.showMessage('✨ Mass Conversion!');
+                    } else {
+                        this.showMessage("Need 700 Influence!");
+                    }
+                } else if (type === 'water') {
+                    if (player.influence >= 1000) {
+                        player.influence -= 1000;
+                        player.waterWalkTimer = 15;
+                        this.showMessage('🌊 Water Walk activated for 15 seconds!');
+                    } else {
+                        this.showMessage("Need 1000 Influence!");
+                    }
+                } else if (type === 'territory') {
+                    if (this.placingTerritory) {
+                        this.cancelTerritory();
+                    } else {
+                        this.placingTerritory = true;
+                        this.showMessage("Click anywhere to place your territory!");
+                    }
+                }
+            }
+
+            cancelTerritory() {
+                this.placingTerritory = false;
+                this.showMessage("Territory placement canceled.");
+            }
+
+            actionReskill(count = 1) {
+                const player = this.getPlayer();
+                if (!player) return;
+
+                const costPer = 50;
+                let converted = 0;
+
+                for (let i = 0; i < count; i++) {
+                    if (player.influence < costPer) break;
+
+                    // Find candidates (not hardliner/worker, own faith)
+                    const candidates = this.followers.filter(f => f.faith === 'player' && f.type !== 'hardliner' && f.type !== 'worker' && f.type !== 'sandal');
+                    if (candidates.length === 0) break;
+
+                    player.influence -= costPer;
+                    // Pick nearest
+                    candidates.sort((a, b) => dist(player, a) - dist(player, b));
+                    const target = candidates[0];
+                    const roll = Math.random();
+                    if (roll < 0.4) target.type = 'hardliner';
+                    else if (roll < 0.8) target.type = 'worker';
+                    else target.type = 'greedy';
+                    converted++;
+                    // Sparkles
+                    for (let j = 0; j < 5; j++) this.particles.push(new Particle(target.x, target.y, '#fff'));
+                }
+
+                if (converted > 0) {
+                    this.showMessage(`Reskilled ${converted} follower(s)!`);
+                } else {
+                    this.showMessage("No suitable followers or not enough influence.");
+                }
+            }
+
+            actionConvertFighter(count = 1) {
+                const player = this.getPlayer();
+                if (!player) return;
+
+                const costPer = 100;
+                let converted = 0;
+
+                for (let i = 0; i < count; i++) {
+                    if (player.influence < costPer) break;
+
+                    // Find candidates (regular or hardliner, own faith, not sandal)
+                    const candidates = this.followers.filter(f => f.faith === 'player' && (f.type === 'regular' || f.type === 'hardliner'));
+                    if (candidates.length === 0) break;
+
+                    player.influence -= costPer;
+                    // Pick nearest
+                    candidates.sort((a, b) => dist(player, a) - dist(player, b));
+                    const target = candidates[0];
+                    target.type = 'warrior';
+                    target.hp = 10;
+                    target.attackPower = 5;
+                    converted++;
+                    // Particles
+                    for (let j = 0; j < 8; j++) this.particles.push(new Particle(target.x, target.y, '#ff6600'));
+                }
+
+                if (converted > 0) {
+                    this.showMessage(`⚔️ Armed ${converted} follower(s) for battle!`);
+                } else {
+                    this.showMessage("No suitable followers or not enough influence.");
+                }
+            }
+
+            actionBribe() {
+                const player = this.getPlayer();
+                if (!player) return;
+
+                if (player.gold < 50) {
+                    this.showMessage("Not enough Gold (Need 50)!");
+                    return;
+                }
+
+                // Find greedy
+                const candidates = this.followers.filter(f => f.faith !== 'player' && f.type === 'greedy');
+                // Sort by distance
+                candidates.sort((a, b) => dist(player, a) - dist(player, b));
+
+                if (candidates.length > 0 && dist(player, candidates[0]) < 200) {
+                    player.gold -= 50;
+                    candidates[0].faith = 'player';
+                    candidates[0].beliefs['player'] = 50;
+                    this.showMessage('💰 Bribed a greedy follower!');
+                    for (let i = 0; i < 10; i++) this.particles.push(new Particle(candidates[0].x, candidates[0].y, '#ffd700'));
+                } else {
+                    this.showMessage("No greedy followers nearby to bribe.");
+                }
+            }
+
+            actionSupport() {
+                const player = this.getPlayer();
+                if (!player) return;
+
+                if (player.gold < 30) {
+                    this.showMessage("Not enough Gold (Need 30)!");
+                    return;
+                }
+                const candidates = this.followers.filter(f => f.type === 'greedy' && dist(player, f) < 300);
+                if (candidates.length > 0) {
+                    player.gold -= 30;
+                    player.ethics = Math.min(100, player.ethics + 5);
+                    candidates[0].type = 'open'; // Freed from greed
+                    candidates[0].faith = 'neutral';
+                    this.showMessage('🤝 Supported Greedy (Freed)!');
+                } else {
+                    this.showMessage("No greedy followers nearby.");
+                }
+            }
+
+            // Sermon on the Mount logic
+            getHolyMountain() {
+                return this.mountains.find(m => m.isHoly);
+            }
+
+            onClick(e) {
+                // Use Client coordinates directly for robustness, accounting for canvas position
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.clientX - rect.left;
+                const clientY = e.clientY - rect.top;
+
+                const mx = (clientX - canvas.width / 2) / this.camera.zoom + this.camera.x;
+                const my = (clientY - canvas.height / 2) / this.camera.zoom + this.camera.y;
+
+                // Handle territory placement
+                if (this.placingTerritory) {
+                    // Check valid terrain (land)
+                    if (this.getTerrainAt(mx, my) !== 'land') {
+                        this.showMessage("Must build on land!");
+                        return;
+                    }
+
+                    // Check distance from other territories
+                    for (const t of this.territories) {
+                        if (Math.hypot(mx - t.x, my - t.y) < t.radius + 150) {
+                            this.showMessage("Too close to another territory!");
+                            return;
+                        }
+                    }
+
+                    // Check if player already has a territory
+                    if (this.territories.some(t => t.faith === 'player')) {
+                        this.showMessage("You can only have one territory!");
+                        this.placingTerritory = false;
+                        return;
+                    }
+
+                    // Place it!
+                    const p = this.getPlayer();
+                    const territory = new Territory(mx, my, 'player');
+                    this.territories.push(territory);
+                    this.structures.push(new Structure(mx, my, 'monument', 'player'));
+
+                    // House spawning is now handled by the Monument's growth in Structure.update()
+
+                    p.territory = territory; // Assign to player
+                    this.placingTerritory = false;
+                    this.showMessage("Territory Established! 🏰");
+                    return;
+                }
+
+                // Check Holy Mountain Click
+                const holyM = this.getHolyMountain();
+                if (holyM) {
+                    const d = Math.sqrt((mx - holyM.x) ** 2 + (my - holyM.y) ** 2);
+                    if (d < holyM.radius * 0.5) {
+                        // Clicked on Holy Mountain Peak area
+                        this.attemptSermon(holyM);
+                        return;
+                    }
+                }
+
+                // Phase 9: Select Person Logic
+                // Find entity under mouse
+                const allUnits = [...this.prophets, ...this.followers];
+                // sort by distance to click, pick closest within reasonable range
+                allUnits.sort((a, b) => Math.hypot(mx - a.x, my - a.y) - Math.hypot(mx - b.x, my - b.y));
+
+                if (allUnits.length > 0 && Math.hypot(mx - allUnits[0].x, my - allUnits[0].y) < 30) {
+                    const unit = allUnits[0];
+                    // Toggle selection logic or just show info?
+                    // Let's sets specific "selectedUnit" if we want to draw panel
+                    this.selectedUnit = unit;
+
+                    let info = "";
+                    if (unit.isPlayer) info = `Prophet (Player) - HP: ${Math.ceil(unit.hp)}`;
+                    else if (unit.influence !== undefined) info = `Rival Prophet (${unit.faith}) - HP: ${Math.ceil(unit.hp)}`;
+                    else info = `${unit.type.toUpperCase()} (${unit.faith}) - Belief: ${Math.floor(unit.beliefs[unit.faith] || 0)}`;
+
+                    this.showMessage("Selected: " + info);
+                }
+            }
+
+            attemptSermon(mountain) {
+                const player = this.getPlayer();
+                const d = dist(player, mountain);
+                if (d > mountain.radius + 100) {
+                    this.showMessage("Too far from the Holy Mountain!");
+                    return;
+                }
+
+                const myFollowers = this.followers.filter(f => f.faith === 'player');
+                if (myFollowers.length < 5) {
+                    this.showMessage("Need 5 followers to preach here.");
+                    return;
+                }
+
+                if (player.sermonCooldown > 0) {
+                    this.showMessage("The precipice is guarded. Wait for cooldown.");
+                    return;
+                }
+
+                // Success!
+                player.sermonCooldown = 60; // 60 seconds
+                player.isPreaching = true;
+                player.influence += 50;
+                player.hp = Math.min(player.maxHp, player.hp + 5);
+                this.showMessage("Sermon delivered! +50 Influence, +5 Stamina.");
+
+                // Spawn sermon speech bubble with gibberish
+                this.speechBubbles.push(new SpeechBubble(player.x, player.y - 30, gibberish()));
+
+                // Reset preaching after a delay
+                setTimeout(() => { player.isPreaching = false; }, 3000);
+            }
+
+            showMessage(text) {
+                const msg = document.getElementById('message');
+                msg.textContent = text;
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 2000);
+            }
+
+            draw() {
+                ctx.fillStyle = COLORS.waterDeep;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw water with waves
+                this.drawWater();
+
+                // Draw land
+                this.drawLand();
+
+                // Draw lake
+                this.drawLake();
+
+                // Draw territories (below entities)
+                for (const territory of this.territories) {
+                    territory.draw(ctx, this.camera);
+                }
+
+                // Y-Sortable Objects
+                const player = this.getPlayer();
+                const isGuarded = player && player.sermonCooldown > 0;
+                const holyMountain = this.mountains.find(m => m.isHoly);
+
+                const sortables = [
+                    ...this.mountains.map(m => ({ y: m.y, draw: () => m.draw(ctx, this.camera, isGuarded, this) })),
+                    ...this.structures.map(s => ({ y: s.y, draw: () => s.draw(ctx, this.camera) })),
+                    ...this.followers.map(f => ({ y: f.y, draw: () => f.draw(ctx, this.camera) })),
+                    // Prophets on Holy Mountain get adjusted Y so they render ABOVE the mountain
+                    ...this.prophets.map(p => {
+                        let sortY = p.y;
+                        if (holyMountain && dist(p, holyMountain) < holyMountain.radius * 1.2) {
+                            // Prophet is on/near Holy Mountain - render after mountain
+                            sortY = holyMountain.y + holyMountain.radius;
+                        }
+                        return { y: sortY, draw: () => p.draw(ctx, this.camera) };
+                    }),
+                ];
+
+                // Add Trees
+                if (this.trees) {
+                    for (const t of this.trees) {
+                        sortables.push({
+                            y: t.y,
+                            draw: () => this.drawTree(ctx, this.camera, t)
+                        });
+                    }
+                }
+
+                sortables.sort((a, b) => a.y - b.y);
+
+                // Draw sorted entities
+                for (const s of sortables) {
+                    s.draw();
+                }
+
+                for (const p of this.particles) p.draw(ctx, this.camera);
+
+                // Draw Speech Bubbles (on top of everything)
+                for (const b of this.speechBubbles) b.draw(ctx, this.camera);
+
+                // Draw Ghost Monument if placing
+                if (this.placingTerritory) {
+                    const worldX = (this.mouseX - canvas.width / 2) / this.camera.zoom + this.camera.x;
+                    const worldY = (this.mouseY - canvas.height / 2) / this.camera.zoom + this.camera.y;
+
+                    const sx = this.mouseX;
+                    const sy = this.mouseY;
+
+                    const valid = this.getTerrainAt(worldX, worldY) === 'land';
+
+                    ctx.save();
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = valid ? '#4f4' : '#f44';
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 40 * this.camera.zoom, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw range
+                    ctx.strokeStyle = valid ? '#4f4' : '#f44';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 100 * this.camera.zoom, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Draw minimap
+                this.drawMinimap();
+            }
+
+            drawWater() {
+                const time = Date.now() / 1000;
+
+                // Animated water background
+                ctx.fillStyle = COLORS.water;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Wave effect at beaches
+                // Wave effect REMOVED as requested ("smoke around landmass")
+                /* for (const beach of this.beaches) { ... } */
+            }
+
+            drawLand() {
+                if (this.landPolygon && this.landPolygon.length > 0) {
+                    const sx = (WORLD_SIZE / 2 - this.camera.x) * this.camera.zoom + canvas.width / 2;
+                    const sy = (WORLD_SIZE / 2 - this.camera.y) * this.camera.zoom + canvas.height / 2;
+                    const sr = this.landRadius * this.camera.zoom;
+
+                    // Land gradient
+                    const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+                    gradient.addColorStop(0, '#4a6b47');
+                    gradient.addColorStop(0.7, COLORS.land);
+                    gradient.addColorStop(0.95, COLORS.beach);
+                    gradient.addColorStop(1, COLORS.beach);
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+
+                    const p0 = this.landPolygon[0];
+                    ctx.moveTo((p0.x - this.camera.x) * this.camera.zoom + canvas.width / 2,
+                        (p0.y - this.camera.y) * this.camera.zoom + canvas.height / 2);
+
+                    for (let i = 1; i < this.landPolygon.length; i++) {
+                        const p = this.landPolygon[i];
+                        ctx.lineTo((p.x - this.camera.x) * this.camera.zoom + canvas.width / 2,
+                            (p.y - this.camera.y) * this.camera.zoom + canvas.height / 2);
+                    }
+
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Fallback to circle if polygon not ready
+                    const sx = (WORLD_SIZE / 2 - this.camera.x) * this.camera.zoom + canvas.width / 2;
+                    const sy = (WORLD_SIZE / 2 - this.camera.y) * this.camera.zoom + canvas.height / 2;
+                    const sr = this.landRadius * this.camera.zoom;
+
+                    const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+                    gradient.addColorStop(0, '#4a6b47');
+                    gradient.addColorStop(0.7, COLORS.land);
+                    gradient.addColorStop(1, COLORS.beach);
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Draw Rivers (GDD §6 - visual only)
+                if (this.rivers && this.rivers.length > 0) {
+                    for (const river of this.rivers) {
+                        if (river.points.length >= 2) {
+                            ctx.strokeStyle = '#4fc3f7';
+                            ctx.lineWidth = river.width * this.camera.zoom;
+                            ctx.lineCap = 'round';
+                            ctx.lineJoin = 'round';
+
+                            ctx.beginPath();
+                            const p0 = river.points[0];
+                            ctx.moveTo(
+                                (p0.x - this.camera.x) * this.camera.zoom + canvas.width / 2,
+                                (p0.y - this.camera.y) * this.camera.zoom + canvas.height / 2
+                            );
+
+                            for (let i = 1; i < river.points.length; i++) {
+                                const p = river.points[i];
+                                ctx.lineTo(
+                                    (p.x - this.camera.x) * this.camera.zoom + canvas.width / 2,
+                                    (p.y - this.camera.y) * this.camera.zoom + canvas.height / 2
+                                );
+                            }
+                            ctx.stroke();
+
+                            // Darker water edge
+                            ctx.strokeStyle = '#0288d1';
+                            ctx.lineWidth = (river.width * 0.7) * this.camera.zoom;
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+
+            drawTree(ctx, camera, tree) {
+                const tx = (tree.x - camera.x) * camera.zoom + canvas.width / 2;
+                const ty = (tree.y - camera.y) * camera.zoom + canvas.height / 2;
+                const tsz = tree.size * camera.zoom;
+
+                // Trunk
+                ctx.fillStyle = '#3e2723';
+                ctx.fillRect(tx - tsz * 0.2, ty, tsz * 0.4, tsz * 0.6);
+
+                // Leaf Triangle
+                ctx.fillStyle = tree.type === 'evergreen' ? '#2e7d32' : '#4caf50'; // Darker for evergreen
+                ctx.beginPath();
+                ctx.moveTo(tx - tsz, ty);
+                ctx.lineTo(tx + tsz, ty);
+                ctx.lineTo(tx, ty - tsz * 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            drawLake() {
+                const sx = (this.lakeX - this.camera.x) * this.camera.zoom + canvas.width / 2;
+                const sy = (this.lakeY - this.camera.y) * this.camera.zoom + canvas.height / 2;
+                const sr = this.lakeRadius * this.camera.zoom;
+
+                // Lake gradient
+                const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+                gradient.addColorStop(0, COLORS.waterDeep);
+                gradient.addColorStop(0.7, COLORS.water);
+                gradient.addColorStop(1, '#2a5a7e');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                // Draw irregular lake shape if available, else circle
+                if (this.lakePolygon) {
+                    if (this.lakePolygon.length > 0) {
+                        const p0 = this.lakePolygon[0];
+                        ctx.moveTo((p0.x - this.camera.x) * this.camera.zoom + canvas.width / 2, (p0.y - this.camera.y) * this.camera.zoom + canvas.height / 2);
+                        for (let i = 1; i < this.lakePolygon.length; i++) {
+                            const p = this.lakePolygon[i];
+                            ctx.lineTo((p.x - this.camera.x) * this.camera.zoom + canvas.width / 2, (p.y - this.camera.y) * this.camera.zoom + canvas.height / 2);
+                        }
+                    }
+                } else {
+                    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw Selection Panel (if selected)
+                /* 
+                if (this.selectedUnit) {
+                   // ... draw panel ... 
+                }
+                */
+
+                this.drawMinimap();
+            }
+
+            drawMinimap() {
+                const mapSize = 150;
+                const mapX = canvas.width - mapSize - 20;
+                const mapY = 20;
+
+                ctx.save();
+                ctx.translate(mapX, mapY);
+
+                // Background
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, 0, mapSize, mapSize);
+
+                // Clip
+                ctx.beginPath();
+                ctx.rect(0, 0, mapSize, mapSize);
+                ctx.clip();
+
+                const scale = mapSize / WORLD_SIZE;
+
+                // Draw entities
+                if (this.landPolygon) {
+                    ctx.fillStyle = '#3d5c3a';
+                    ctx.beginPath();
+                    const pts = this.landPolygon;
+                    ctx.moveTo(pts[0].x * scale, pts[0].y * scale);
+                    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x * scale, pts[i].y * scale);
+                    ctx.fill();
+                }
+
+                for (const t of this.territories) {
+                    ctx.fillStyle = t.getColor(); // lighter
+                    ctx.beginPath();
+                    ctx.arc(t.x * scale, t.y * scale, t.radius * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                for (const p of this.prophets) {
+                    ctx.fillStyle = p.getColor();
+                    const sz = p.isPlayer ? 4 : 3;
+                    ctx.fillRect(p.x * scale - sz / 2, p.y * scale - sz / 2, sz, sz);
+                }
+
+                // Camera Frame
+                const cw = (canvas.width / this.camera.zoom) * scale;
+                const ch = (canvas.height / this.camera.zoom) * scale;
+                const cx = (this.camera.x - (canvas.width / this.camera.zoom) / 2) * scale;
+                const cy = (this.camera.y - (canvas.height / this.camera.zoom) / 2) * scale;
+
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx, cy, cw, ch);
+
+                ctx.restore();
+            }
+
+            loop(time) {
+                const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+                this.lastTime = time;
+
+                this.update(dt);
+                this.draw();
+
+                requestAnimationFrame(t => this.loop(t));
+            }
+        }
+
+        // Start the game
+        // Start the game
+        const game = new Game();
+        window.game = game; // Explicitly expose to window for UI buttons
+        // ANTIGRAVITY DEBUG EXTENSION
+        // Exposes internal game state for AI Agent QA and Debugging
+        window.antigravity = {
+            getGame: () => game,
+            getPlayer: () => game.prophets.find(p => p.isPlayer),
+            setResource: (type, amount) => {
+                const p = window.antigravity.getPlayer();
+                if (type === 'gold') p.gold = amount;
+                if (type === 'influence') p.influence = amount;
+                if (type === 'health') p.hp = amount;
+                console.log(`[Antigravity] Set ${type} to ${amount}`);
+            },
+            spawnEntity: (type, count = 1, faith = 'player') => {
+                const p = window.antigravity.getPlayer();
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 100 + Math.random() * 50;
+                    const x = p.x + Math.cos(angle) * dist;
+                    const y = p.y + Math.sin(angle) * dist;
+                    if (type === 'follower') {
+                        game.followers.push(new Follower(x, y, faith));
+                    } else if (type === 'rival') {
+                        game.prophets.push(new Prophet(x, y, faith, false));
+                    }
+                }
+                console.log(`[Antigravity] Spawned ${count} ${type}(s)`);
+            },
+            teleport: (x, y) => {
+                const p = window.antigravity.getPlayer();
+                p.x = x;
+                p.y = y;
+                console.log(`[Antigravity] Teleported to ${x}, ${y}`);
+            },
+            toggleDebug: () => {
+                game.debugMode = !game.debugMode;
+                console.log(`[Antigravity] Debug Mode: ${game.debugMode}`);
+            },
+            getStats: () => {
+                const p = window.antigravity.getPlayer();
+                return {
+                    fps: 60, // approximate
+                    entities: game.followers.length + game.prophets.length,
+                    playerPos: { x: Math.round(p.x), y: Math.round(p.y) }
+                };
+            }
+        };
+        console.log("Antigravity Extension Installed. Access via window.antigravity");
+
+    </script>
+</body>
+
+</html>
