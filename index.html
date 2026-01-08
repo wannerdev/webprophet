@@ -303,7 +303,7 @@
         // Game Constants
         const WORLD_SIZE = 3000;
         const CONVERSION_THRESHOLD = 30;
-        const PROPHET_SPEED = 3;
+        const PROPHET_SPEED = 2;
         const FOLLOWER_SPEED = 1.8;
         const CONVERSION_RADIUS = 80;
         const HARDLINER_GROUP_SIZE = 3;
@@ -1924,8 +1924,23 @@
                 const targetRadius = 100 + (faithFollowers * 5);
                 const maxRad = 600;
 
+                // Calculate max radius before hitting another territory
+                let maxBeforeCollision = maxRad;
+                for (const other of game.territories) {
+                    if (other === this) continue;
+                    const distToOther = Math.sqrt((this.x - other.x) ** 2 + (this.y - other.y) ** 2);
+                    // Max this territory can expand without overlapping the other
+                    // Leave a small gap (10px) between territories
+                    const maxExpand = distToOther - other.radius - 10;
+                    if (maxExpand < maxBeforeCollision) {
+                        maxBeforeCollision = Math.max(100, maxExpand); // Never shrink below starting size
+                    }
+                }
+
+                // Clamp target to both max radius AND collision limit
+                const clampedTarget = Math.min(targetRadius, maxRad, maxBeforeCollision);
+
                 // Smooth interpolation to target size
-                const clampedTarget = Math.min(targetRadius, maxRad);
                 this.radius += (clampedTarget - this.radius) * dt * 0.5;
             }
 
