@@ -495,11 +495,11 @@
                         this.updateAI(dt, game);
                     }
                 } else {
-                    // Player Controls
-                    if (game.keys['w'] || game.keys['arrowup']) this.vy -= 1.5;
-                    if (game.keys['s'] || game.keys['arrowdown']) this.vy += 1.5;
-                    if (game.keys['a'] || game.keys['arrowleft']) this.vx -= 1.5;
-                    if (game.keys['d'] || game.keys['arrowright']) this.vx += 1.5;
+                    // Player Controls - lower acceleration for more deliberate movement
+                    if (game.keys['w'] || game.keys['arrowup']) this.vy -= 0.8;
+                    if (game.keys['s'] || game.keys['arrowdown']) this.vy += 0.8;
+                    if (game.keys['a'] || game.keys['arrowleft']) this.vx -= 0.8;
+                    if (game.keys['d'] || game.keys['arrowright']) this.vx += 0.8;
                 }
 
                 // Apply velocity with friction
