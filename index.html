@@ -2828,13 +2828,24 @@
                                     }
                                     this.showMessage(`⚔️ WAR! ${oldFaith} followers take up arms!`);
                                 } else {
-                                    // Non-player winner: peaceful conversion as before
+                                    // Non-player (rival) winner: convert loser's followers AND mark prophet as converted
                                     for (const f of loserFollowers) {
                                         f.faith = winner.faith;
                                         f.beliefs[f.faith] = 40;
                                         f.speechText = "🛐";
                                         f.speechTimer = 2;
+                                        // Particles for each conversion
+                                        for (let part = 0; part < 3; part++) {
+                                            this.particles.push(new Particle(f.x, f.y, winner.getColor()));
+                                        }
                                     }
+
+                                    // Mark the losing prophet as converted and shrink them
+                                    loser.isConverted = true;
+                                    loser.radius = loser.baseRadius * 0.7;
+                                    loser.territory = winner.territory;
+
+                                    this.showMessage(`⚔️ ${winner.faith} conquers ${oldFaith}! Prophet converted!`);
                                 }
 
                                 // Transfer territory ownership
