@@ -1294,7 +1294,38 @@
                 }
 
                 // Find prophet of same faith to follow
-                const myProphet = game.prophets.find(p => p.faith === this.faith || (this.faith === 'player' && p.isPlayer));
+                // Special logic for hardliners: max 5 per converted (mini) prophet, otherwise follow main
+                let myProphet = null;
+
+                if (this.type === 'hardliner' && this.faith === 'player') {
+                    // For player hardliners: prioritize main player prophet
+                    const mainPlayer = game.getPlayer();
+                    const convertedProphets = game.prophets.filter(p => p.isConverted && p.faith === 'player');
+
+                    // Check if any converted prophet has fewer than 5 hardliner followers
+                    let assignedMini = null;
+                    for (const mini of convertedProphets) {
+                        const followersOfMini = game.followers.filter(f =>
+                            f.type === 'hardliner' &&
+                            f.faith === 'player' &&
+                            dist(f, mini) < dist(f, mainPlayer) &&
+                            dist(f, mini) < 150
+                        ).length;
+                        if (followersOfMini < 5) {
+                            // This follower can be assigned to this mini-prophet if close
+                            if (dist(this, mini) < 200) {
+                                assignedMini = mini;
+                                break;
+                            }
+                        }
+                    }
+
+                    // If no mini-prophet available or far away, follow main player
+                    myProphet = assignedMini || mainPlayer;
+                } else {
+                    // Default: follow any prophet of same faith
+                    myProphet = game.prophets.find(p => p.faith === this.faith || (this.faith === 'player' && p.isPlayer));
+                }
 
                 // Worker Construction Logic
                 let findingWork = false;
