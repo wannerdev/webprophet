@@ -770,25 +770,41 @@
                 }
             }
 
-            // Special AI for Nairb - runs AWAY from followers and smacks them
+            // Special AI for Nairb - runs chaotically across the map, smacks followers
             updateNairbAI(dt, game) {
-                // Find nearby followers of Nairb's faith
-                const myFollowers = game.followers.filter(f => f.faith === this.faith);
+                // Initialize chaotic waypoint if not set
+                if (!this.chaoticWaypoint) {
+                    this.chaoticWaypoint = this.getRandomLandPoint(game);
+                    this.waypointTimer = 0;
+                }
 
-                if (myFollowers.length > 0) {
-                    // Calculate center of mass of followers
+                // Chaotic movement - pick random waypoints across the map
+                this.waypointTimer -= dt;
+                if (this.waypointTimer <= 0 || dist(this, this.chaoticWaypoint) < 100) {
+                    // Pick new random waypoint on land
+                    this.chaoticWaypoint = this.getRandomLandPoint(game);
+                    this.waypointTimer = randRange(3, 8); // Change direction every 3-8 seconds
+                }
+
+                // Move towards chaotic waypoint
+                const toWaypoint = Math.atan2(this.chaoticWaypoint.y - this.y, this.chaoticWaypoint.x - this.x);
+                this.vx += Math.cos(toWaypoint) * 0.15;
+                this.vy += Math.sin(toWaypoint) * 0.15;
+
+                // Also slightly flee if followers are VERY close (within 80 units)
+                const myFollowers = game.followers.filter(f => f.faith === this.faith);
+                const closeFollowers = myFollowers.filter(f => dist(this, f) < 80);
+                if (closeFollowers.length > 0) {
                     let cx = 0, cy = 0;
-                    for (const f of myFollowers) {
+                    for (const f of closeFollowers) {
                         cx += f.x;
                         cy += f.y;
                     }
-                    cx /= myFollowers.length;
-                    cy /= myFollowers.length;
-
-                    // RUN AWAY from followers!
+                    cx /= closeFollowers.length;
+                    cy /= closeFollowers.length;
                     const awayAngle = Math.atan2(this.y - cy, this.x - cx);
-                    this.vx += Math.cos(awayAngle) * 0.12;
-                    this.vy += Math.sin(awayAngle) * 0.12;
+                    this.vx += Math.cos(awayAngle) * 0.1;
+                    this.vy += Math.sin(awayAngle) * 0.1;
                 }
 
                 // Occasionally smack nearby followers
@@ -811,6 +827,18 @@
                         game.speechBubbles.push(new SpeechBubble(this.x, this.y - 30, "Go away!"));
                     }
                 }
+            }
+
+            // Helper for Nairb's chaotic movement
+            getRandomLandPoint(game) {
+                for (let i = 0; i < 50; i++) {
+                    const x = randRange(300, WORLD_SIZE - 300);
+                    const y = randRange(300, WORLD_SIZE - 300);
+                    if (game.getTerrainAt(x, y) === 'land') {
+                        return { x, y };
+                    }
+                }
+                return { x: WORLD_SIZE / 2, y: WORLD_SIZE / 2 };
             }
 
             draw(ctx, camera) {
@@ -2429,58 +2457,87 @@
                     }
                 }
 
-                // Generate River (GDD §6 - updated logic: Always flow to sea, sometimes start from mountain)
+                // Generate Rivers (1-3 rivers from lake to sea, with branches)
                 this.rivers = [];
-                // 30% chance to start from a mountain, else from lake
-                const startFromMountain = Math.random() < 0.3;
-                let riverStartX, riverStartY;
+                const riverCount = 1 + Math.floor(Math.random() * 3); // 1-3 rivers
+                const angleStep = (Math.PI * 2) / riverCount;
+                const angleOffset = Math.random() * Math.PI * 2;
 
-                if (startFromMountain && this.mountains.length > 1) {
-                    // Pick a random mountain (skip first which is holy mountain)
-                    const m = this.mountains[1 + Math.floor(Math.random() * (this.mountains.length - 1))];
-                    riverStartX = m.x;
-                    riverStartY = m.y;
-                } else {
+                for (let r = 0; r < riverCount; r++) {
                     // Start from lake edge
-                    const riverStartAngle = Math.random() * Math.PI * 2;
-                    riverStartX = this.lakeX + Math.cos(riverStartAngle) * this.lakeRadius;
-                    riverStartY = this.lakeY + Math.sin(riverStartAngle) * this.lakeRadius;
-                }
+                    const riverStartAngle = angleOffset + (r * angleStep) + (Math.random() - 0.5) * 0.5;
+                    const riverStartX = this.lakeX + Math.cos(riverStartAngle) * this.lakeRadius;
+                    const riverStartY = this.lakeY + Math.sin(riverStartAngle) * this.lakeRadius;
 
-                // Generate flow points
-                const riverPoints = [{ x: riverStartX, y: riverStartY }];
-                let rx = riverStartX;
-                let ry = riverStartY;
+                    // Generate main river flow points
+                    const mainWidth = 10 + Math.random() * 6;
+                    const riverPoints = [{ x: riverStartX, y: riverStartY }];
+                    let rx = riverStartX;
+                    let ry = riverStartY;
 
-                // Determine general direction outwards from center
-                const startAngle = Math.atan2(ry - center, rx - center);
-                let flowAngle = startAngle;
+                    // Flow outward from lake center
+                    let flowAngle = riverStartAngle;
+                    let attempts = 0;
+                    let reachedSea = false;
 
-                let attempts = 0;
-                let reachedSea = false;
+                    // Branch tracking
+                    const branches = [];
+                    let branchCreated = false;
 
-                // Keep generating untill we hit sea (or too many points)
-                while (!reachedSea && attempts < 100) {
-                    // Meander slightly
-                    flowAngle += (Math.random() - 0.5) * 1.0;
-                    // Push outwards generally
-                    const step = 20;
-                    rx += Math.cos(flowAngle) * step;
-                    ry += Math.sin(flowAngle) * step;
+                    while (!reachedSea && attempts < 100) {
+                        // Meander slightly
+                        flowAngle += (Math.random() - 0.5) * 0.8;
+                        const step = 18 + Math.random() * 8;
+                        rx += Math.cos(flowAngle) * step;
+                        ry += Math.sin(flowAngle) * step;
 
-                    riverPoints.push({ x: rx, y: ry });
+                        riverPoints.push({ x: rx, y: ry });
 
-                    // Check if outside land polygon
-                    if (!isPointInPoly({ x: rx, y: ry }, this.landPolygon) && dist({ x: rx, y: ry }, { x: center, y: center }) > this.landRadius * 0.8) {
-                        reachedSea = true;
+                        // Create branch partway through (30-70% of the way)
+                        if (!branchCreated && attempts > 20 && attempts < 70 && Math.random() < 0.15) {
+                            branchCreated = true;
+                            // Branch splits off at an angle
+                            const branchAngle = flowAngle + (Math.random() > 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.5);
+                            const branchPoints = [{ x: rx, y: ry }];
+                            let bx = rx, by = ry;
+                            let bAngle = branchAngle;
+
+                            // Generate branch
+                            for (let b = 0; b < 30; b++) {
+                                bAngle += (Math.random() - 0.5) * 0.6;
+                                const bStep = 15 + Math.random() * 8;
+                                bx += Math.cos(bAngle) * bStep;
+                                by += Math.sin(bAngle) * bStep;
+                                branchPoints.push({ x: bx, y: by });
+
+                                // Stop if reached sea
+                                if (!isPointInPoly({ x: bx, y: by }, this.landPolygon)) break;
+                            }
+
+                            branches.push({
+                                points: branchPoints,
+                                width: mainWidth * 0.5 // Branches are thinner
+                            });
+                        }
+
+                        // Check if reached sea
+                        if (!isPointInPoly({ x: rx, y: ry }, this.landPolygon)) {
+                            reachedSea = true;
+                        }
+                        attempts++;
                     }
-                    attempts++;
-                }
 
-                this.rivers.push({
-                    points: riverPoints,
-                    width: 8 + Math.random() * 6
-                });
+                    // Add main river
+                    this.rivers.push({
+                        points: riverPoints,
+                        width: mainWidth
+                    });
+
+                    // Add branches
+                    for (const branch of branches) {
+                        this.rivers.push(branch);
+                    }
+                }
             }
 
             getValidSpawnPosition(minDist, maxDist, padding = 30) {
