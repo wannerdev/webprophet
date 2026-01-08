@@ -746,8 +746,8 @@
                     const d = dist(this, this.aiTarget);
                     if (d > 30) {
                         const angle = Math.atan2(this.aiTarget.y - this.y, this.aiTarget.x - this.x);
-                        this.vx += Math.cos(angle) * 0.15;
-                        this.vy += Math.sin(angle) * 0.15;
+                        this.vx += Math.cos(angle) * 0.08;
+                        this.vy += Math.sin(angle) * 0.08;
                     }
                 }
 
@@ -787,8 +787,8 @@
 
                     // RUN AWAY from followers!
                     const awayAngle = Math.atan2(this.y - cy, this.x - cx);
-                    this.vx += Math.cos(awayAngle) * 0.25;
-                    this.vy += Math.sin(awayAngle) * 0.25;
+                    this.vx += Math.cos(awayAngle) * 0.12;
+                    this.vy += Math.sin(awayAngle) * 0.12;
                 }
 
                 // Occasionally smack nearby followers
