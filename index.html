@@ -2429,58 +2429,70 @@
                     }
                 }
 
-                // Generate River (GDD §6 - updated logic: Always flow to sea, sometimes start from mountain)
+                // Generate Rivers (GDD §6 - Rivers start from lake, flow to sea or taper on land)
                 this.rivers = [];
-                // 30% chance to start from a mountain, else from lake
-                const startFromMountain = Math.random() < 0.3;
-                let riverStartX, riverStartY;
+                const riverCount = 2 + Math.floor(Math.random() * 4); // 2-5 rivers
+                const angleStep = (Math.PI * 2) / riverCount;
+                const angleOffset = Math.random() * Math.PI * 2;
 
-                if (startFromMountain && this.mountains.length > 1) {
-                    // Pick a random mountain (skip first which is holy mountain)
-                    const m = this.mountains[1 + Math.floor(Math.random() * (this.mountains.length - 1))];
-                    riverStartX = m.x;
-                    riverStartY = m.y;
-                } else {
-                    // Start from lake edge
-                    const riverStartAngle = Math.random() * Math.PI * 2;
-                    riverStartX = this.lakeX + Math.cos(riverStartAngle) * this.lakeRadius;
-                    riverStartY = this.lakeY + Math.sin(riverStartAngle) * this.lakeRadius;
-                }
+                for (let r = 0; r < riverCount; r++) {
+                    // Start from lake edge at evenly distributed angles
+                    const riverStartAngle = angleOffset + (r * angleStep) + (Math.random() - 0.5) * 0.5;
+                    const riverStartX = this.lakeX + Math.cos(riverStartAngle) * this.lakeRadius;
+                    const riverStartY = this.lakeY + Math.sin(riverStartAngle) * this.lakeRadius;
 
-                // Generate flow points
-                const riverPoints = [{ x: riverStartX, y: riverStartY }];
-                let rx = riverStartX;
-                let ry = riverStartY;
+                    // Generate flow points
+                    const riverPoints = [{ x: riverStartX, y: riverStartY, width: 10 + Math.random() * 6 }];
+                    let rx = riverStartX;
+                    let ry = riverStartY;
 
-                // Determine general direction outwards from center
-                const startAngle = Math.atan2(ry - center, rx - center);
-                let flowAngle = startAngle;
+                    // Flow generally outward from lake center
+                    let flowAngle = riverStartAngle;
+                    let currentWidth = riverPoints[0].width;
 
-                let attempts = 0;
-                let reachedSea = false;
+                    let attempts = 0;
+                    let reachedEnd = false;
 
-                // Keep generating untill we hit sea (or too many points)
-                while (!reachedSea && attempts < 100) {
-                    // Meander slightly
-                    flowAngle += (Math.random() - 0.5) * 1.0;
-                    // Push outwards generally
-                    const step = 20;
-                    rx += Math.cos(flowAngle) * step;
-                    ry += Math.sin(flowAngle) * step;
+                    // Keep generating until we hit sea, taper out, or too many points
+                    while (!reachedEnd && attempts < 80) {
+                        // Meander slightly
+                        flowAngle += (Math.random() - 0.5) * 0.8;
 
-                    riverPoints.push({ x: rx, y: ry });
+                        // Bias towards outward flow from center
+                        const toCenter = Math.atan2(center - ry, center - rx);
+                        flowAngle = flowAngle * 0.7 + (toCenter + Math.PI) * 0.3; // Push outward
 
-                    // Check if outside land polygon
-                    if (!isPointInPoly({ x: rx, y: ry }, this.landPolygon) && dist({ x: rx, y: ry }, { x: center, y: center }) > this.landRadius * 0.8) {
-                        reachedSea = true;
+                        const step = 15 + Math.random() * 10;
+                        rx += Math.cos(flowAngle) * step;
+                        ry += Math.sin(flowAngle) * step;
+
+                        // Taper width as river flows
+                        currentWidth = Math.max(2, currentWidth - 0.1 - Math.random() * 0.15);
+
+                        riverPoints.push({ x: rx, y: ry, width: currentWidth });
+
+                        // Check end conditions
+                        const distFromCenter = Math.sqrt((rx - center) ** 2 + (ry - center) ** 2);
+
+                        // Reached sea (outside land)
+                        if (!isPointInPoly({ x: rx, y: ry }, this.landPolygon) && distFromCenter > this.landRadius * 0.8) {
+                            reachedEnd = true;
+                        }
+
+                        // Tapered too thin (ends on land)
+                        if (currentWidth <= 2) {
+                            reachedEnd = true;
+                        }
+
+                        attempts++;
                     }
-                    attempts++;
+
+                    this.rivers.push({
+                        points: riverPoints,
+                        baseWidth: riverPoints[0].width
+                    });
                 }
 
-                this.rivers.push({
-                    points: riverPoints,
-                    width: 8 + Math.random() * 6
-                });
             }
 
             getValidSpawnPosition(minDist, maxDist, padding = 30) {
@@ -3508,35 +3520,40 @@
                     ctx.fill();
                 }
 
-                // Draw Rivers (GDD §6 - visual only)
+                // Draw Rivers (GDD §6 - with tapering widths)
                 if (this.rivers && this.rivers.length > 0) {
                     for (const river of this.rivers) {
                         if (river.points.length >= 2) {
-                            ctx.strokeStyle = '#4fc3f7';
-                            ctx.lineWidth = river.width * this.camera.zoom;
                             ctx.lineCap = 'round';
                             ctx.lineJoin = 'round';
 
-                            ctx.beginPath();
-                            const p0 = river.points[0];
-                            ctx.moveTo(
-                                (p0.x - this.camera.x) * this.camera.zoom + canvas.width / 2,
-                                (p0.y - this.camera.y) * this.camera.zoom + canvas.height / 2
-                            );
+                            // Draw each segment with its own width for tapering effect
+                            for (let i = 0; i < river.points.length - 1; i++) {
+                                const p1 = river.points[i];
+                                const p2 = river.points[i + 1];
+                                const width = (p1.width + p2.width) / 2; // Average width for segment
 
-                            for (let i = 1; i < river.points.length; i++) {
-                                const p = river.points[i];
-                                ctx.lineTo(
-                                    (p.x - this.camera.x) * this.camera.zoom + canvas.width / 2,
-                                    (p.y - this.camera.y) * this.camera.zoom + canvas.height / 2
-                                );
+                                const sx1 = (p1.x - this.camera.x) * this.camera.zoom + canvas.width / 2;
+                                const sy1 = (p1.y - this.camera.y) * this.camera.zoom + canvas.height / 2;
+                                const sx2 = (p2.x - this.camera.x) * this.camera.zoom + canvas.width / 2;
+                                const sy2 = (p2.y - this.camera.y) * this.camera.zoom + canvas.height / 2;
+
+                                // Outer lighter water
+                                ctx.strokeStyle = '#4fc3f7';
+                                ctx.lineWidth = width * this.camera.zoom;
+                                ctx.beginPath();
+                                ctx.moveTo(sx1, sy1);
+                                ctx.lineTo(sx2, sy2);
+                                ctx.stroke();
+
+                                // Inner darker water
+                                ctx.strokeStyle = '#0288d1';
+                                ctx.lineWidth = (width * 0.6) * this.camera.zoom;
+                                ctx.beginPath();
+                                ctx.moveTo(sx1, sy1);
+                                ctx.lineTo(sx2, sy2);
+                                ctx.stroke();
                             }
-                            ctx.stroke();
-
-                            // Darker water edge
-                            ctx.strokeStyle = '#0288d1';
-                            ctx.lineWidth = (river.width * 0.7) * this.camera.zoom;
-                            ctx.stroke();
                         }
                     }
                 }
