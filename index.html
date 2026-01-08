@@ -380,9 +380,10 @@
                 ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
                 ctx.strokeStyle = `rgba(150, 150, 150, ${alpha * 0.4})`;
                 ctx.lineWidth = 1 * scale;
-                ctx.beginPath();
-                const bw = 35 * scale; // Smaller width
-                const bh = 16 * scale; // Smaller height
+                // Dynamic bubble size based on text length
+                const textWidth = ctx.measureText(this.text).width;
+                const bw = Math.max(40 * scale, textWidth + 16 * scale); // At least 40, or text width + padding
+                const bh = 18 * scale;
                 ctx.roundRect(sx - bw / 2, sy - bh, bw, bh, 5 * scale);
                 ctx.fill();
                 ctx.stroke();
@@ -396,9 +397,8 @@
                 ctx.closePath();
                 ctx.fill();
 
-                // Smaller text
                 ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
-                ctx.font = `${9 * scale}px sans-serif`;
+                ctx.font = `${10 * scale}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(this.text, sx, sy - bh / 2);
@@ -1261,15 +1261,24 @@
                         }
                     }
 
-                    // Periodically say "We are all individuals!"
+                    // Periodically say iconic quotes
                     this.sayTimer -= dt;
                     if (this.sayTimer <= 0) {
                         this.sayTimer = randRange(8, 20); // Say every 8-20 seconds
-                        if (Math.random() < 0.5) {
-                            game.speechBubbles.push(new SpeechBubble(this.x, this.y - 20, "We are all individuals!"));
-                        } else {
-                            game.speechBubbles.push(new SpeechBubble(this.x, this.y - 20, "Yes! We're all different!"));
-                        }
+                        // Iconic crowd quotes
+                        const quotes = [
+                            "We are all individuals!",
+                            "Yes! We're all different!",
+                            "I'm not!",
+                            "Follow the sandal!",
+                            "The shoe is a sign!",
+                            "Cast off the shoe!",
+                            "He IS the Messiah!",
+                            "Only the TRUE Messiah denies!",
+                            "How shall we worship thee?"
+                        ];
+                        const quote = quotes[Math.floor(Math.random() * quotes.length)];
+                        game.speechBubbles.push(new SpeechBubble(this.x, this.y - 20, quote));
                     }
                 }
 
