@@ -474,9 +474,10 @@
             }
 
             getColor() {
-                // Robust check for player allegiance (original or converted)
-                if (this.isPlayer || this.faith === 'player' || this.isConverted) return COLORS.player;
-                if (this.isNairb || this.faith === 'nairb') return COLORS.nairb;
+                // Use the prophet's ACTUAL faith for color
+                if (this.isPlayer) return COLORS.player;
+                if (this.faith === 'player') return COLORS.player;
+                if (this.faith === 'nairb' || this.isNairb) return COLORS.nairb;
                 if (this.faith === 'rival1') return COLORS.rival1;
                 if (this.faith === 'rival2') return COLORS.rival2;
                 if (this.faith === 'rival3') return COLORS.rival3;
