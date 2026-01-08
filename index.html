@@ -264,6 +264,11 @@
                 +10
             </button>
         </div>
+        <!-- Build Barracks Button -->
+        <button class="action-btn" id="btnBarracks" onclick="game.actionBuildBarracks()">
+            🏰 Build Barracks<br>
+            <span class="cost-inf">300 ✋</span> / <span class="cost-gold">100 G</span>
+        </button>
         <div style="display: flex; gap: 4px;">
             <button class="action-btn" id="btnReskill" onclick="game.actionReskill()" style="flex: 1;">
                 🔨 Reskill to Worker<br>
@@ -2915,6 +2920,24 @@
                         territoryBtn.innerText = "Build Territory (10 Followers)";
                     }
                 }
+
+                // Barracks Button State
+                const btnBarracks = document.getElementById('btnBarracks');
+                if (btnBarracks) {
+                    const hasBarracks = this.structures.some(s => s.faith === 'player' && s.type === 'barracks');
+                    const hasTerritory = this.territories.some(t => t.faith === 'player');
+
+                    if (!hasTerritory) {
+                        btnBarracks.disabled = true;
+                        btnBarracks.innerText = "Need Territory";
+                    } else if (hasBarracks) {
+                        btnBarracks.disabled = true;
+                        btnBarracks.innerText = "Barracks Built";
+                    } else {
+                        btnBarracks.disabled = false;
+                        btnBarracks.innerHTML = `🏰 Build Barracks<br><span class="cost-inf">300 ✋</span> / <span class="cost-gold">100 G</span>`;
+                    }
+                }
             }
 
             useMiracle(type, event) {
@@ -3009,9 +3032,71 @@
                 }
             }
 
+
+            actionBuildBarracks() {
+                const player = this.getPlayer();
+                if (!player) return;
+
+                // Requirements
+                const hasTerritory = this.territories.some(t => t.faith === 'player');
+                const hasBarracks = this.structures.some(s => s.faith === 'player' && s.type === 'barracks');
+
+                if (!hasTerritory) {
+                    this.showMessage("Must establish Territory first!");
+                    return;
+                }
+                if (hasBarracks) {
+                    this.showMessage("You already have a Barracks!");
+                    return;
+                }
+
+                // Cost
+                if (player.influence < 300 || player.gold < 100) {
+                    this.showMessage("Need 300 Influence & 100 Gold!");
+                    return;
+                }
+
+                // Find Monument to build near
+                const monument = this.structures.find(s => s.faith === 'player' && s.type === 'monument');
+                if (!monument) {
+                    this.showMessage("No Monument found!");
+                    return;
+                }
+
+                // Pay cost
+                player.influence -= 300;
+                player.gold -= 100;
+
+                // Build
+                const angle = Math.random() * Math.PI * 2;
+                const d = 60;
+                const bx = monument.x + Math.cos(angle) * d;
+                const by = monument.y + Math.sin(angle) * d;
+
+                this.structures.push(new Structure(bx, by, 'barracks', 'player'));
+                this.showMessage("🏰 Barracks construction complete!");
+
+                // Particles
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push(new Particle(bx, by, '#888'));
+                }
+
+                // Update UI state immediately
+                this.updateUI();
+            }
+
             actionConvertFighter(count = 1) {
                 const player = this.getPlayer();
                 if (!player) return;
+
+                // Restriction: Must have Barracks
+                const hasTerritory = this.territories.some(t => t.faith === 'player');
+                const hasBarracks = this.structures.some(s => s.faith === 'player' && s.type === 'barracks');
+
+                if (!hasTerritory || !hasBarracks) {
+                    this.showMessage("Requires Territory and Barracks!");
+                    return;
+                }
 
                 const costPer = 100;
                 let converted = 0;
