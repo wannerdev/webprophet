@@ -1527,6 +1527,9 @@
             updateConversion(game) {
                 // Check nearby prophets
                 for (const prophet of game.prophets) {
+                    // Skip converted mini-prophets - they cannot convert others
+                    if (prophet.isConverted) continue;
+
                     const d = dist(this, prophet);
                     if (d < CONVERSION_RADIUS) {
                         const faithKey = prophet.isPlayer ? 'player' : prophet.faith;
