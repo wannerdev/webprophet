@@ -200,6 +200,118 @@
             color: #4f4;
             font-weight: bold;
         }
+
+        /* Virtual Joystick Styles */
+        #joystick-container {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            z-index: 150;
+            touch-action: none;
+        }
+
+        #joystick-base {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+
+        #joystick-stick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            left: 35px;
+            top: 35px;
+            transition: none;
+        }
+
+        /* Mobile-specific styles */
+        body.mobile-ui #joystick-container {
+            display: block;
+        }
+
+        body.mobile-ui #instructions {
+            display: none;
+        }
+
+        body.mobile-ui #hud {
+            gap: 8px;
+        }
+
+        body.mobile-ui .hud-item {
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 6px;
+        }
+
+        body.mobile-ui .hud-icon {
+            width: 16px;
+            height: 16px;
+            font-size: 14px;
+        }
+
+        body.mobile-ui #miracles {
+            left: auto;
+            right: 10px;
+            bottom: 140px;
+        }
+
+        body.mobile-ui .miracle-btn {
+            padding: 8px 12px;
+            font-size: 11px;
+            border-radius: 8px;
+        }
+
+        body.mobile-ui .miracle-cost {
+            font-size: 9px;
+        }
+
+        body.mobile-ui .action-container {
+            right: 10px;
+            bottom: 10px;
+            max-width: 140px;
+        }
+
+        body.mobile-ui .action-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+        }
+
+        body.mobile-ui #minimap {
+            width: 80px;
+            height: 80px;
+        }
+
+        /* Media query for smaller screens */
+        @media (max-width: 768px) {
+            body.mobile-ui #hud {
+                flex-wrap: wrap;
+                max-width: 200px;
+            }
+
+            body.mobile-ui .hud-item {
+                padding: 3px 6px;
+                font-size: 10px;
+            }
+
+            body.mobile-ui #miracles {
+                bottom: 160px;
+            }
+
+            body.mobile-ui .miracle-btn {
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+        }
     </style>
 </head>
 
@@ -279,18 +391,24 @@
             </button>
         </div>
         <button class="action-btn" id="btnBribe" onclick="game.actionBribe()">
-            💰 Bribe Greedy<br>
+            💰 Bribe<br>
             <span class="cost-gold">50 G</span> / <span
                 style="color: #fff; font-weight: bold; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">-10
                 Ethics</span>
         </button>
         <button class="action-btn" id="btnSupport" onclick="game.actionSupport()">
-            🤝 Support Greedy<br>
+            🤝 Support<br>
             <span class="cost-gold">30 G</span> / <span style="color: #fff; font-weight: bold;">+5 Ethics</span>
         </button>
     </div>
 
     <div id="message"></div>
+
+    <!-- Virtual Joystick for Mobile -->
+    <div id="joystick-container">
+        <div id="joystick-base"></div>
+        <div id="joystick-stick"></div>
+    </div>
 
     <script>
         // ============================================
@@ -301,9 +419,9 @@
         const ctx = canvas.getContext('2d');
 
         // Game Constants
-        const WORLD_SIZE = 3000;
+        const WORLD_SIZE = 3600;
         const CONVERSION_THRESHOLD = 30;
-        const PROPHET_SPEED = 2;
+        const PROPHET_SPEED = 1;
         const FOLLOWER_SPEED = 1.8;
         const CONVERSION_RADIUS = 80;
         const HARDLINER_GROUP_SIZE = 3;
@@ -501,6 +619,12 @@
                     if (game.keys['s'] || game.keys['arrowdown']) this.vy += 0.8;
                     if (game.keys['a'] || game.keys['arrowleft']) this.vx -= 0.8;
                     if (game.keys['d'] || game.keys['arrowright']) this.vx += 0.8;
+
+                    // Mobile joystick input
+                    if (game.joystick && game.joystick.active) {
+                        this.vx += game.joystick.dx * 0.8;
+                        this.vy += game.joystick.dy * 0.8;
+                    }
                 }
 
                 // Apply velocity with friction
@@ -841,7 +965,6 @@
                         victim.hp -= 1;
 
                         game.particles.push(new Particle(victim.x, victim.y, '#ff6600'));
-                        game.speechBubbles.push(new SpeechBubble(this.x, this.y - 30, "Go away!"));
                     }
                 }
             }
@@ -2319,6 +2442,35 @@
                 this.mouseX = 0;
                 this.mouseY = 0;
 
+                // Game state
+                this.gameOver = false;
+                this.gameOverType = null; // 'victory' or 'defeat'
+
+                // Stats for highscore
+                this.stats = {
+                    kills: 0,
+                    maxFollowers: 0,
+                    maxWorkers: 0,
+                    maxFighters: 0,
+                    maxInfluence: 0
+                };
+
+                // War notification timer
+                this.warNotification = null;
+
+                // Mobile/Touch state
+                this.isMobile = false;
+                this.joystick = {
+                    active: false,
+                    startX: 0,
+                    startY: 0,
+                    currentX: 0,
+                    currentY: 0,
+                    dx: 0,
+                    dy: 0
+                };
+
+
                 this.init();
             }
 
@@ -2342,10 +2494,91 @@
                 });
                 canvas.addEventListener('click', e => this.onClick(e));
 
+                // Mobile Detection
+                this.isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                    || ('ontouchstart' in window)
+                    || (navigator.maxTouchPoints > 0);
+
+                if (this.isMobile) {
+                    document.body.classList.add('mobile-ui');
+                    this.initJoystick();
+                }
+
                 this.generateWorld();
                 this.spawnEntities();
 
                 requestAnimationFrame(t => this.loop(t));
+            }
+
+            initJoystick() {
+                const joystickContainer = document.getElementById('joystick-container');
+                const joystickStick = document.getElementById('joystick-stick');
+                const joystickBase = document.getElementById('joystick-base');
+
+                if (!joystickContainer) return;
+
+                const baseRadius = 60; // Half of joystick-base width
+                const stickRadius = 25; // Half of joystick-stick width
+                const maxDistance = baseRadius - stickRadius;
+
+                const handleTouchStart = (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const rect = joystickContainer.getBoundingClientRect();
+                    this.joystick.active = true;
+                    this.joystick.startX = rect.left + baseRadius;
+                    this.joystick.startY = rect.top + baseRadius;
+                    this.joystick.currentX = touch.clientX;
+                    this.joystick.currentY = touch.clientY;
+                    this.updateJoystickPosition(touch.clientX, touch.clientY, maxDistance, joystickStick, baseRadius, stickRadius);
+                };
+
+                const handleTouchMove = (e) => {
+                    if (!this.joystick.active) return;
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    this.joystick.currentX = touch.clientX;
+                    this.joystick.currentY = touch.clientY;
+                    this.updateJoystickPosition(touch.clientX, touch.clientY, maxDistance, joystickStick, baseRadius, stickRadius);
+                };
+
+                const handleTouchEnd = (e) => {
+                    e.preventDefault();
+                    this.joystick.active = false;
+                    this.joystick.dx = 0;
+                    this.joystick.dy = 0;
+                    // Reset stick to center
+                    joystickStick.style.left = `${baseRadius - stickRadius}px`;
+                    joystickStick.style.top = `${baseRadius - stickRadius}px`;
+                };
+
+                joystickContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+                joystickContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+                joystickContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+                joystickContainer.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+            }
+
+            updateJoystickPosition(touchX, touchY, maxDistance, stickElement, baseRadius, stickRadius) {
+                const dx = touchX - this.joystick.startX;
+                const dy = touchY - this.joystick.startY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                let clampedX = dx;
+                let clampedY = dy;
+
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(dy, dx);
+                    clampedX = Math.cos(angle) * maxDistance;
+                    clampedY = Math.sin(angle) * maxDistance;
+                }
+
+                // Update stick visual position
+                stickElement.style.left = `${baseRadius - stickRadius + clampedX}px`;
+                stickElement.style.top = `${baseRadius - stickRadius + clampedY}px`;
+
+                // Normalize direction (-1 to 1)
+                this.joystick.dx = clampedX / maxDistance;
+                this.joystick.dy = clampedY / maxDistance;
             }
 
             resize() {
@@ -2797,6 +3030,14 @@
                 // Update Prophets
                 for (const p of this.prophets) {
                     p.update(dt, this);
+
+                    // Cap influence at 100 if prophet has no followers
+                    if (!p.isPlayer) {
+                        const followerCount = this.followers.filter(f => f.faith === p.faith).length;
+                        if (followerCount === 0 && p.influence > 100) {
+                            p.influence = 100;
+                        }
+                    }
                 }
 
                 // Prophet collisions
@@ -2815,6 +3056,12 @@
                                 b.vx += Math.cos(angle) * 5;
                                 b.vy += Math.sin(angle) * 5;
                                 continue;
+                            }
+
+                            // Show WAR notification on first collision with player
+                            if ((a.isPlayer || b.isPlayer) && !this.warStarted) {
+                                this.warStarted = true;
+                                this.warNotification = { text: `⚔️ WAR STARTED! ⚔️`, timer: 3 };
                             }
 
                             // Fight logic - Weighted by Followers!
@@ -2917,7 +3164,7 @@
                                             this.particles.push(new Particle(f.x, f.y, '#ff4444'));
                                         }
                                     }
-                                    this.showMessage(`⚔️ WAR! ${oldFaith} followers take up arms!`);
+                                    this.stats.kills++; // Track prophet kills
                                 } else {
                                     // Non-player (rival) winner: convert loser's followers AND mark prophet as converted
                                     for (const f of loserFollowers) {
@@ -3081,7 +3328,23 @@
                     if (player.influence >= 1000) {
                         player.influence -= 1000;
                         player.waterWalkTimer = 15;
-                        this.showMessage('🌊 Water Walk activated for 15 seconds!');
+
+                        // If already on water, immediately convert all nearby followers
+                        const terrain = this.getTerrainAt(player.x, player.y);
+                        if (terrain === 'water') {
+                            for (const follower of this.followers) {
+                                if (dist(player, follower) < 200 &&
+                                    follower.type !== 'greedy' &&
+                                    follower.type !== 'hardliner') {
+                                    follower.faith = 'player';
+                                    follower.beliefs.player = 80;
+                                    this.particles.push(new Particle(follower.x, follower.y, '#4fc3f7'));
+                                }
+                            }
+                            this.showMessage('🌊 Water Walk + Mass Conversion on the waves!');
+                        } else {
+                            this.showMessage('🌊 Water Walk activated for 15 seconds! Walk on water to convert!');
+                        }
                     } else {
                         this.showMessage("Need 1000 Influence!");
                     }
@@ -3285,6 +3548,16 @@
                 const clientX = e.clientX - rect.left;
                 const clientY = e.clientY - rect.top;
 
+                // Handle restart button click on game over screen
+                if (this.gameOver && this.restartBtn) {
+                    const btn = this.restartBtn;
+                    if (clientX >= btn.x && clientX <= btn.x + btn.w &&
+                        clientY >= btn.y && clientY <= btn.y + btn.h) {
+                        this.restart();
+                        return;
+                    }
+                }
+
                 const mx = (clientX - canvas.width / 2) / this.camera.zoom + this.camera.x;
                 const my = (clientY - canvas.height / 2) / this.camera.zoom + this.camera.y;
 
@@ -3350,7 +3623,7 @@
 
                     let info = "";
                     if (unit.isPlayer) info = `Prophet (Player) - HP: ${Math.ceil(unit.hp)}`;
-                    else if (unit.influence !== undefined) info = `Rival Prophet (${unit.faith}) - HP: ${Math.ceil(unit.hp)}`;
+                    else if (unit.influence !== undefined) info = `Rival Prophet (${unit.faith}) - HP: ${Math.ceil(unit.hp)} | Influence: ${Math.floor(unit.influence)}`;
                     else info = `${unit.type.toUpperCase()} (${unit.faith}) - Belief: ${Math.floor(unit.beliefs[unit.faith] || 0)}`;
 
                     this.showMessage("Selected: " + info);
@@ -3696,10 +3969,138 @@
                 const dt = Math.min((time - this.lastTime) / 1000, 0.1);
                 this.lastTime = time;
 
-                this.update(dt);
+                // Freeze game on game over
+                if (!this.gameOver) {
+                    this.update(dt);
+
+                    // Track stats
+                    const player = this.getPlayer();
+                    if (player) {
+                        // Check player death
+                        if (player.hp <= 0) {
+                            this.gameOver = true;
+                            this.gameOverType = 'defeat';
+                        }
+
+                        // Track max stats
+                        const followers = this.followers.filter(f => f.faith === 'player');
+                        this.stats.maxFollowers = Math.max(this.stats.maxFollowers, followers.length);
+                        this.stats.maxWorkers = Math.max(this.stats.maxWorkers, followers.filter(f => f.type === 'worker').length);
+                        this.stats.maxFighters = Math.max(this.stats.maxFighters, followers.filter(f => f.type === 'warrior' || f.type === 'defender').length);
+                        this.stats.maxInfluence = Math.max(this.stats.maxInfluence, player.influence);
+                    }
+
+                    // Update war notification timer
+                    if (this.warNotification) {
+                        this.warNotification.timer -= dt;
+                        if (this.warNotification.timer <= 0) {
+                            this.warNotification = null;
+                        }
+                    }
+                }
+
                 this.draw();
 
+                // Draw overlays
+                this.drawOverlays();
+
                 requestAnimationFrame(t => this.loop(t));
+            }
+
+            drawOverlays() {
+                // War Notification (big red text)
+                if (this.warNotification) {
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = 'bold 72px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 10;
+                    ctx.fillText(this.warNotification.text, canvas.width / 2, canvas.height / 2);
+                    ctx.restore();
+                }
+
+                // Game Over Screen
+                if (this.gameOver) {
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    const player = this.getPlayer();
+                    const isVictory = this.gameOverType !== 'defeat';
+
+                    // Title
+                    ctx.fillStyle = isVictory ? '#4CAF50' : '#f44336';
+                    ctx.font = 'bold 64px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 10;
+                    ctx.fillText(isVictory ? '🏆 VICTORY! 🏆' : '💀 GAME OVER 💀', canvas.width / 2, canvas.height / 2 - 150);
+
+                    // Highscores
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '28px sans-serif';
+                    const y = canvas.height / 2 - 50;
+                    const lineH = 40;
+
+                    ctx.fillText(`⚔️ Prophet Kills: ${this.stats.kills}`, canvas.width / 2, y);
+                    ctx.fillText(`👥 Max Followers: ${this.stats.maxFollowers}`, canvas.width / 2, y + lineH);
+                    ctx.fillText(`🔨 Max Workers: ${this.stats.maxWorkers}`, canvas.width / 2, y + lineH * 2);
+                    ctx.fillText(`⚔️ Max Fighters: ${this.stats.maxFighters}`, canvas.width / 2, y + lineH * 3);
+                    ctx.fillText(`✋ Max Influence: ${Math.floor(this.stats.maxInfluence)}`, canvas.width / 2, y + lineH * 4);
+
+                    // Goodness Score
+                    const ethics = player ? player.ethics : 0;
+                    const goodnessLabel = ethics > 30 ? '😇 SAINT' : ethics > 0 ? '🙂 GOOD' : ethics < -30 ? '😈 EVIL' : ethics < 0 ? '😠 BAD' : '😐 NEUTRAL';
+                    ctx.fillStyle = ethics > 0 ? '#4CAF50' : ethics < 0 ? '#f44336' : '#888';
+                    ctx.fillText(`Goodness: ${goodnessLabel} (${ethics})`, canvas.width / 2, y + lineH * 5);
+
+                    // Restart Button
+                    const btnX = canvas.width / 2 - 100;
+                    const btnY = canvas.height / 2 + 160;
+                    const btnW = 200;
+                    const btnH = 50;
+
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(btnX, btnY, btnW, btnH);
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(btnX, btnY, btnW, btnH);
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.fillText('🔄 RESTART', canvas.width / 2, btnY + btnH / 2);
+
+                    // Store button bounds for click detection
+                    this.restartBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+                    ctx.restore();
+                }
+            }
+
+            restart() {
+                // Reset game
+                this.prophets = [];
+                this.followers = [];
+                this.structures = [];
+                this.territories = [];
+                this.mountains = [];
+                this.beaches = [];
+                this.particles = [];
+                this.speechBubbles = [];
+                this.gameOver = false;
+                this.gameOverType = null;
+                this.warNotification = null;
+                this.warStarted = false;
+                this.stats = { kills: 0, maxFollowers: 0, maxWorkers: 0, maxFighters: 0, maxInfluence: 0 };
+
+                this.generateWorld();
+                this.spawnEntities();
             }
         }
 
