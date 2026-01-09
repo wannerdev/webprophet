@@ -773,14 +773,15 @@
                             if (this.preachingTimer <= 0) {
                                 this.sermonCooldown = 180; // 3 minutes cooldown
                                 this.influence += 50;
-                                this.hp = Math.min(this.maxHp, this.hp + 5);
+                                // Removed Stamina gain as requested
+                                // this.hp = Math.min(this.maxHp, this.hp + 5);
 
                                 // Sermon on the Mount: Converts even enemy hardliners!
                                 let convertedCount = 0;
                                 for (const f of game.followers) {
                                     if (f.faith !== 'player' && f.type === 'hardliner') {
                                         const d = dist(this, f);
-                                        if (d < 250) { // Sermon has wide reach
+                                        if (d < 500) { // Increased effect range (was 250)
                                             f.faith = 'player';
                                             f.type = 'regular';
                                             f.beliefs.player = 50;
@@ -790,7 +791,7 @@
                                     }
                                 }
 
-                                let msg = "✨ Sermon complete! +50 Influence, +5 Stamina.";
+                                let msg = "✨ Sermon complete! +50 Influence.";
                                 if (convertedCount > 0) {
                                     msg += ` Converted ${convertedCount} hardliner(s)!`;
                                 }
@@ -1184,6 +1185,19 @@
                     ctx.font = `${sr * 0.4}px Arial`;
                     ctx.textAlign = 'center';
                     ctx.fillText('📜', sx, barY - sr * 0.3);
+                }
+
+                // Prophet Name (display above head)
+                if (this.name && !this.isPlayer) {
+                    ctx.fillStyle = '#fff';
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 3 * camera.zoom;
+                    ctx.font = `bold ${Math.max(12, sr * 0.6)}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    const nameY = sy - sr * 2.8;
+                    ctx.strokeText(this.name, sx, nameY);
+                    ctx.fillText(this.name, sx, nameY);
                 }
             }
         }
@@ -1989,19 +2003,24 @@
                     const height = sr * 1.8;
                     const roofH = sr * 1.2;
 
-                    // Walls (Mud Brick)
-                    ctx.fillStyle = '#C2A383'; // Mud/Clay color
+                    // Walls with straw gradient (darker at bottom, lighter at top)
+                    const wallGradient = ctx.createLinearGradient(sx, sy + height / 2, sx, sy - height / 2);
+                    wallGradient.addColorStop(0, '#A88B6D'); // Darker straw at bottom
+                    wallGradient.addColorStop(0.3, '#B89B7A');
+                    wallGradient.addColorStop(0.6, '#C8AB8A');
+                    wallGradient.addColorStop(1, '#D8BB9A'); // Lighter straw at top
+                    ctx.fillStyle = wallGradient;
                     ctx.fillRect(sx - width / 2, sy - height / 2, width, height);
 
-                    // Brick Texture
-                    ctx.fillStyle = '#A88B6D';
-                    for (let i = 0; i < 3; i++) {
-                        for (let j = 0; j < 4; j++) {
-                            if ((i + j) % 2 === 0) continue;
-                            const bx = sx - width / 2 + (j / 4) * width;
-                            const by = sy - height / 2 + (i / 3) * height;
-                            ctx.fillRect(bx + 2, by + 2, (width / 4) - 4, (height / 3) - 4);
-                        }
+                    // Subtle horizontal straw lines for texture
+                    ctx.strokeStyle = 'rgba(139, 107, 77, 0.3)';
+                    ctx.lineWidth = 1 * camera.zoom;
+                    for (let i = 0; i < 5; i++) {
+                        const lineY = sy - height / 2 + (i + 1) * (height / 6);
+                        ctx.beginPath();
+                        ctx.moveTo(sx - width / 2 + 3, lineY);
+                        ctx.lineTo(sx + width / 2 - 3, lineY);
+                        ctx.stroke();
                     }
 
                     // Doorway (Dark opening)
@@ -2802,9 +2821,22 @@
             }
 
             spawnEntities() {
+                // Old Testament Prophet Names
+                const prophetNames = [
+                    'Moses', 'Elijah', 'Isaiah', 'Jeremiah', 'Ezekiel',
+                    'Daniel', 'Hosea', 'Joel', 'Amos', 'Obadiah',
+                    'Jonah', 'Micah', 'Nahum', 'Habakkuk', 'Zephaniah',
+                    'Haggai', 'Zechariah', 'Malachi', 'Samuel', 'Nathan',
+                    'Elisha', 'Ahijah', 'Gad', 'Iddo', 'Shemaiah'
+                ];
+                // Shuffle names for variety
+                const shuffledNames = [...prophetNames].sort(() => Math.random() - 0.5);
+                let nameIndex = 0;
+
                 // Player prophet - Safe distance from center to avoid potential center-lake
                 const pPos = this.getValidSpawnPosition(250, 500);
                 const player = new Prophet(pPos.x, pPos.y, 'player', true);
+                player.name = 'You';
                 this.prophets.push(player);
 
                 // AI prophets (5 Rivals)
@@ -2829,7 +2861,9 @@
                     // Use safe fallback if loop fails
                     if (!pos) pos = this.getValidSpawnPosition(300, 600);
 
-                    this.prophets.push(new Prophet(pos.x, pos.y, faith, false));
+                    const rival = new Prophet(pos.x, pos.y, faith, false);
+                    rival.name = shuffledNames[nameIndex++] || 'Prophet';
+                    this.prophets.push(rival);
                 }
 
                 // Open-minded followers
@@ -3129,15 +3163,15 @@
                                 // WAR MECHANIC: If player defeats rival, followers become hostile warriors
                                 const loserFollowers = this.followers.filter(f => f.faith === oldFaith);
                                 if (winner.isPlayer) {
-                                    // SPAWN BARRACKS next to player monument (GDD §4.1)
-                                    const playerMonument = this.structures.find(s => s.type === 'monument' && s.faith === 'player');
-                                    if (playerMonument) {
-                                        const barracksAngle = Math.random() * Math.PI * 2;
-                                        const barracksX = playerMonument.x + Math.cos(barracksAngle) * 80;
-                                        const barracksY = playerMonument.y + Math.sin(barracksAngle) * 80;
-                                        this.structures.push(new Structure(barracksX, barracksY, 'barracks', 'player'));
-                                        this.showMessage("🏰 Barracks built! Your followers prepare for war!");
-                                    }
+                                    // SPAWN BARRACKS REMOVED (User request: No auto-build)
+                                    // const playerMonument = this.structures.find(s => s.type === 'monument' && s.faith === 'player');
+                                    // if (playerMonument) {
+                                    //     const barracksAngle = Math.random() * Math.PI * 2;
+                                    //     const barracksX = playerMonument.x + Math.cos(barracksAngle) * 80;
+                                    //     const barracksY = playerMonument.y + Math.sin(barracksAngle) * 80;
+                                    //     this.structures.push(new Structure(barracksX, barracksY, 'barracks', 'player'));
+                                    //     this.showMessage("🏰 Barracks built! Your followers prepare for war!");
+                                    // }
 
                                     // Some player followers become DEFENDERS (GDD §4.2)
                                     const playerFollowers = this.followers.filter(f => f.faith === 'player' && f.type === 'regular');
@@ -3633,8 +3667,9 @@
             attemptSermon(mountain) {
                 const player = this.getPlayer();
                 const d = dist(player, mountain);
+                // Reverted: Must be close/on the mountain (Ledge requirement)
                 if (d > mountain.radius + 100) {
-                    this.showMessage("Too far from the Holy Mountain!");
+                    this.showMessage("Too far from the Holy Mountain! Climb higher!");
                     return;
                 }
 
@@ -3653,8 +3688,9 @@
                 player.sermonCooldown = 60; // 60 seconds
                 player.isPreaching = true;
                 player.influence += 50;
-                player.hp = Math.min(player.maxHp, player.hp + 5);
-                this.showMessage("Sermon delivered! +50 Influence, +5 Stamina.");
+                // Removed Stamina gain as requested
+                // player.hp = Math.min(player.maxHp, player.hp + 5);
+                this.showMessage("Sermon delivered! +50 Influence.");
 
                 // Spawn sermon speech bubble with gibberish
                 this.speechBubbles.push(new SpeechBubble(player.x, player.y - 30, gibberish()));
@@ -4015,7 +4051,10 @@
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     ctx.fillStyle = '#ff0000';
-                    ctx.font = 'bold 72px sans-serif';
+                    ctx.fillStyle = '#ff0000';
+                    // Dynamic font size for mobile
+                    const fontSize = canvas.width < 600 ? 40 : 72;
+                    ctx.font = `bold ${fontSize}px sans-serif`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.shadowColor = '#000';
